@@ -5,3 +5,4 @@ docs
 prisma/generated/
 .agents
 .codex
+/generated/prisma
