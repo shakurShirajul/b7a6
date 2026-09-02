@@ -1,0 +1,14 @@
+enum Role {
+    DONOR
+    PATIENT
+    HOSPITAL
+    VOLUNTEER
+    ADMIN
+}
+
+
+enum USER_STATUS {
+    ACTIVE
+    INACTIVE
+    PENDING
+}
