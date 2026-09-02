@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { authService } from "./auth.service";
-
+import { sendResponse } from "../../utils/sendResponse";
+import httpStatus from "http-status";
+import { AppError } from "../../errors/AppError";
 const refreshTokenCookieName = "refreshToken";
 
 const cookieOptions = {
@@ -18,8 +20,9 @@ const loginUser = catchAsync(
 
     res.cookie(refreshTokenCookieName, result.refreshToken, cookieOptions);
 
-    res.status(200).json({
+    sendResponse(res, {
       success: true,
+      statusCode: httpStatus.OK,
       message: "User logged in successfully",
       data: {
         accessToken: result.accessToken,
@@ -28,11 +31,48 @@ const loginUser = catchAsync(
     });
   },
 );
+
 const refreshToken = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {},
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token =
+      req.cookies?.[refreshTokenCookieName];
+
+    if (!token) {
+      throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is required");
+    }
+
+    const result = await authService.refreshToken(token);
+
+    res.cookie(refreshTokenCookieName, result.refreshToken, cookieOptions);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Access token generated successfully",
+      data: {
+        accessToken: result.accessToken,
+      },
+    });
+  },
 );
+
 const logoutUser = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {},
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.cookies?.[refreshTokenCookieName];
+
+    if (token) {
+      await authService.logoutUser(token);
+    }
+
+    res.clearCookie(refreshTokenCookieName, cookieOptions);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "User logged out successfully",
+      data: null,
+    });
+  },
 );
 
 export const authController = {

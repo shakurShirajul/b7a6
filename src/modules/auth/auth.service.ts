@@ -89,10 +89,7 @@ const loginUser = async (payload: TLoginPayload) => {
     throw new AppError(httpStatus.FORBIDDEN, "User is not active");
   }
 
-  const isPasswordMatched = await bcrypt.compare(
-    password,
-    user.password,
-  );
+  const isPasswordMatched = await bcrypt.compare(password, user.password);
 
   if (!isPasswordMatched) {
     throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password");
@@ -120,8 +117,66 @@ const loginUser = async (payload: TLoginPayload) => {
   };
 };
 
-const logoutUser = () => {};
-const refreshToken = () => {};
+const logoutUser = async (token: string) => {
+  try {
+    const decoded = jwt.verify(token, config.jwt_refresh_secret) as TJwtPayload;
+    await prisma.user.update({
+      where: {
+        id: decoded.userId,
+      },
+      data: {
+        refreshTokenHash: null,
+        refreshTokenExpiresAt: null,
+      },
+    });
+  } catch (error) {}
+};
+
+const refreshToken = async (token: string) => {
+    let decoded: TJwtPayload;
+
+    try {
+        decoded = jwt.verify(token, config.jwt_refresh_secret) as TJwtPayload;
+    } catch {
+        throw new AppError(httpStatus.UNAUTHORIZED, "Invalid refresh token");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: decoded.userId,
+        },
+    });
+
+    if (!user || !user.refreshTokenHash || !user.refreshTokenExpiresAt) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "Invalid refresh token");
+    }
+
+    if (user.status !== "ACTIVE") {
+        throw new AppError(httpStatus.FORBIDDEN, "User account is not active");
+    }
+
+    if (user.refreshTokenExpiresAt < new Date()) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token expired");
+    }
+
+    const isTokenMatched = await bcrypt.compare(token, user.refreshTokenHash);
+
+    if (!isTokenMatched) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "Invalid refresh token");
+    }
+
+    const tokenPayload: TJwtPayload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+    };
+
+    const tokens = createAuthTokens(tokenPayload);
+
+    await saveRefreshToken(user.id, tokens.refreshToken);
+
+    return tokens;
+};
 
 export const authService = {
   loginUser,
