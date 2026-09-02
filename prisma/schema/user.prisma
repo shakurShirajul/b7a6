@@ -3,7 +3,7 @@ model User {
     name      String
     email     String      @unique
     phone     String
-    avatarUrl String
+    avatarUrl String?
     password  String
     role      Role        @default(DONOR)
     status    USER_STATUS @default(ACTIVE)
