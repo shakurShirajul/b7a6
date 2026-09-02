@@ -16,6 +16,8 @@ model User {
     passwordResetExpiresAt DateTime?
     deletedAt              DateTime?
 
+    notifications Notification[]
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 

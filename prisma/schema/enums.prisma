@@ -1,8 +1,6 @@
 enum Role {
     DONOR
     PATIENT
-    HOSPITAL
-    VOLUNTEER
     ADMIN
 }
 
@@ -11,4 +9,12 @@ enum USER_STATUS {
     ACTIVE
     INACTIVE
     PENDING
+}
+
+enum NotificationType {
+  BLOOD_REQUEST
+  REQUEST_ACCEPTED
+  REQUEST_REJECTED
+  DONATION_COMPLETED
+  SYSTEM
 }
