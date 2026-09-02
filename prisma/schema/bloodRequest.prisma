@@ -1,0 +1,25 @@
+model BloodRequest {
+  id          Int           @id @default(autoincrement())
+  patientId   Int
+  bloodType   BloodType
+  description String?
+  quantity    Int
+  status      RequestStatus @default(PENDING)
+  isUrgent    Boolean       @default(false)
+
+  requestedAt  DateTime  @default(now())
+  requiredAt   DateTime
+  fullfilledAt DateTime?
+
+  division     String
+  district     String
+  area         String
+  hospitalName String
+
+  patient PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+}

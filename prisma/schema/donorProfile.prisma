@@ -1,0 +1,23 @@
+model DonorProfile {
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @unique
+  bloodType          BloodType
+  isAvailable        Boolean   @default(true)
+  totalDonationCount Int       @default(0)
+  lastDonationDate   DateTime?
+
+  division String
+  district String
+  area     String
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  donorRequests donorRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([bloodType])
+  @@index([lastDonationDate])
+  @@index([isAvailable])
+}

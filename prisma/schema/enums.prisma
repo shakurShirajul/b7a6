@@ -1,14 +1,13 @@
 enum Role {
-    DONOR
-    PATIENT
-    ADMIN
+  DONOR
+  PATIENT
+  ADMIN
 }
 
-
-enum USER_STATUS {
-    ACTIVE
-    INACTIVE
-    PENDING
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
 }
 
 enum NotificationType {
@@ -17,4 +16,27 @@ enum NotificationType {
   REQUEST_REJECTED
   DONATION_COMPLETED
   SYSTEM
+}
+
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum RequestStatus {
+  PENDING
+  FULFILLED
+  REJECTED
 }

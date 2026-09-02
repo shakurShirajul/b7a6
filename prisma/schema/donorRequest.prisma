@@ -1,0 +1,17 @@
+model donorRequest {
+  id          Int           @id @default(autoincrement())
+  patientId   Int
+  donorId     Int
+  status      RequestStatus @default(PENDING)
+  requestedAt DateTime      @default(now())
+  respondedAt DateTime?
+
+  patientProfile PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  donorProfile   DonorProfile?  @relation(fields: [donorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([donorId])
+}

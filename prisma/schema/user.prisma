@@ -1,26 +1,30 @@
 model User {
-    id        Int         @id @default(autoincrement())
-    name      String
-    email     String      @unique
-    phone     String
-    avatarUrl String?
-    password  String
-    role      Role        @default(DONOR)
-    status    USER_STATUS @default(ACTIVE)
+  id          Int        @id @default(autoincrement())
+  name        String
+  email       String     @unique
+  phone       String
+  avatar      String?
+  password    String
+  role        Role       @default(DONOR)
+  status      UserStatus @default(ACTIVE)
+  dateOfBirth DateTime?
+  gender      Gender?
 
-    refreshTokenHash       String?
-    refreshTokenExpiresAt  DateTime?
-    lastLoginAt            DateTime?
-    emailVerifiedAt        DateTime?
-    passwordResetToken     String?
-    passwordResetExpiresAt DateTime?
-    deletedAt              DateTime?
+  refreshTokenHash       String?
+  refreshTokenExpiresAt  DateTime?
+  lastLoginAt            DateTime?
+  emailVerifiedAt        DateTime?
+  passwordResetToken     String?
+  passwordResetExpiresAt DateTime?
+  deletedAt              DateTime?
 
-    notifications Notification[]
+  notifications  Notification[]
+  patientProfile PatientProfile?
+  donorProfile   DonorProfile?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([role])
-    @@index([status])
+  @@index([role])
+  @@index([status])
 }

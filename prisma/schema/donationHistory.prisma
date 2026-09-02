@@ -1,0 +1,10 @@
+model DonationHistory {
+  id             Int @id @default(autoincrement())
+  donorId        Int
+  patientId      Int
+  bloodRequestId Int
+  donorRequestId Int
+
+  createdAt DateTime @default(now())
+  updated   DateTime @updatedAt
+}
