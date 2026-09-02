@@ -36,3 +36,8 @@ const registerIntoDB = async (userData: RegisterUserPayload) => {
 
   return createUser;
 };
+
+
+export const userService = {
+  registerIntoDB,
+};
