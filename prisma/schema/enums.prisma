@@ -37,6 +37,7 @@ enum Gender {
 
 enum RequestStatus {
   PENDING
+  APPROVED
   FULFILLED
   REJECTED
 }

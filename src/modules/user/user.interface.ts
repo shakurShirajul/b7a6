@@ -1,4 +1,5 @@
-type Role = "PATIENT" | "HOSPITAL" | "DONOR" | "ADMIN" | "VOLUNTEER";
+import { Role } from "../../../prisma/generated/prisma/enums"
+
 export interface RegisterUserPayload{
     name: string
     email: string
