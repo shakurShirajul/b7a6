@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b7a60000-0000-4000-8000-000000000012",
     "name": "Blood Donation Platform",
-    "description": "Single-file production collection: import this JSON only; no environment is required. Open collection Variables, use the prefilled adminEmail/adminPassword for Login admin; set your private demoPassword for patient/donor requests and check role emails, then run the login requests. baseUrl is https://b7a6-iota.vercel.app. Login saves role-specific and active access tokens in collection variables; protected requests automatically send the appropriate Bearer token. Postman captures and rotates the refreshToken cookie; keep the cookie jar enabled. Refresh updates the most recent login role. Run Session cleanup / Logout last to revoke the current cookie session and clear saved authorization. Collection values override stale environment variables. Alternative/provider requests remain opt-in. The demo admin credentials are included for evaluation. Other passwords, tokens, and provider secrets are blank; clear private credentials and session values before sharing a later export.",
+    "description": "Single-file production collection: import this JSON only; no environment is required. Open collection Variables, use the prefilled adminEmail/adminPassword for Login admin; use the prefilled demoPassword for seeded patient/donor requests and check role emails, then run the login requests. baseUrl is https://b7a6-iota.vercel.app. Login saves role-specific and active access tokens in collection variables; protected requests automatically send the appropriate Bearer token. Postman captures and rotates the refreshToken cookie; keep the cookie jar enabled. Refresh updates the most recent login role. Run Session cleanup / Logout last to revoke the current cookie session and clear saved authorization. Collection values override stale environment variables. Alternative/provider requests remain opt-in. The seeded demo account credentials are included for evaluation. Tokens and provider secrets are blank; clear private credentials and session values before sharing a later export.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -210,9 +210,9 @@
     },
     {
       "key": "demoPassword",
-      "value": "",
+      "value": "BloodDemo123!",
       "type": "string",
-      "description": "Private value. Leave blank in the submitted/exported file; populate only in your own Postman copy."
+      "description": "Shared password for freshly seeded demo patient and donor accounts."
     },
     {
       "key": "newPatientEmail",

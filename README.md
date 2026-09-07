@@ -13,8 +13,9 @@ A role-based backend for coordinating verified blood requests with eligible dono
 - Published API documentation: **`<SET_PUBLISHED_POSTMAN_OR_OPENAPI_URL>`**
 - Admin demo email: `admin.demo@blood.local`
 - Admin demo password: `BloodDemo123!`.
+- Seeded patient and donor demo password: `BloodDemo123!`.
 
-The published API-documentation URL remains a placeholder. The demo admin credentials above are included for evaluation. For an existing demo administrator with a password mismatch, use the recovery command below instead of reseeding. Keep all other account passwords and provider credentials private.
+The published API-documentation URL remains a placeholder. The seeded demo credentials above are included for evaluation. For an existing demo administrator with a password mismatch, use the recovery command below instead of reseeding. Keep all other account passwords and provider credentials private.
 
 ## Architecture
 
@@ -362,7 +363,7 @@ The Postman webhook request contains signature/payload placeholders for document
 
 1. Import only [Blood-Donation-Platform.postman_collection.json](postman/Blood-Donation-Platform.postman_collection.json). This is the single JSON file to submit; no environment file is needed. Replace older imported copies to avoid running stale scripts.
 2. Select **No environment** in Postman. Open the collection’s **Variables** tab; `baseUrl` is already `https://b7a6-iota.vercel.app`, without `/api/v1`. Collection scripts also override stale environment values for the variables they manage.
-3. **Login admin** is ready to use: `adminEmail=admin.demo@blood.local` and `adminPassword=BloodDemo123!` are prefilled. Patient/donor requests use the separate `demoPassword` variable; set it to their existing password and check their role emails. Only the admin password was changed. Keep private passwords and exported tokens empty when sharing files.
+3. **Login admin** is ready to use: `adminEmail=admin.demo@blood.local` and `adminPassword=BloodDemo123!` are prefilled. Patient/donor requests use the separate `demoPassword` variable, prefilled with `BloodDemo123!` for the freshly seeded accounts. Check role emails before running requests. Keep private passwords and exported tokens empty when sharing files.
 4. Keep the cookie jar enabled in request settings. Login captures the server's `refreshToken` cookie automatically; do not add a manual `Cookie` header or copy a refresh token into variables. The cookie is scoped to `/api/v1/auth` and, in production, requires HTTPS. See [Postman's cookie manager documentation](https://learning.postman.com/docs/use/send-requests/response-data/cookies/).
 5. Send **Login patient**, **Login donor**, or **Login admin**. Scripts save `patientAccessToken`, `donorAccessToken`, or `adminAccessToken`, plus `activeAccessToken` and `activeSessionRole`, in collection variables. Protected examples automatically use their required role's Bearer token. New requests that inherit collection authorization use the most recent login's token. Public requests and the missing-token example explicitly use No Auth.
 6. Send **Refresh token** when needed. The latest successful login owns the cookie session: after admin login, refresh updates `adminAccessToken` and `activeAccessToken`, preserving the patient/donor access tokens. Postman stores the rotated cookie automatically. Refresh requires a login through this collection first; it does not run automatically on expired access tokens.
@@ -373,7 +374,7 @@ Cookies are shared per API host, so signing in as a different role replaces the 
 
 To run a non-linear alternative, prepare a separate resource ID, set it in the collection variable named by that request, and temporarily set `runAlternativeBranches` to `true`. `Reject assignment` needs a distinct `INVITED` assignment in `rejectAssignmentId`; `Cancel payment` needs a distinct `OPEN` Checkout in `cancelPaymentId`; and `Refund payment` needs a distinct `PAID` payment in `refundPaymentId`. Run the individual request, then return the flag to `false`. Google OAuth and the signed Stripe webhook have separate opt-in flags because they require real provider state; see the workflow guide.
 
-The submitted collection includes the demo admin email and password for evaluation; it contains no populated JWTs, refresh cookies, other account passwords, or provider secrets. Submit the clean repository JSON. If exporting your working Postman copy after testing, clear private passwords, tokens, provider secrets, and test resource IDs before sharing; logout clears session tokens but intentionally keeps your configured password.
+The submitted collection includes the seeded demo account credentials for evaluation; it contains no populated JWTs, refresh cookies, private non-demo passwords, or provider secrets. Submit the clean repository JSON. If exporting your working Postman copy after testing, clear private passwords, tokens, provider secrets, and test resource IDs before sharing; logout clears session tokens but intentionally keeps your configured password.
 
 ## Response and error shape
 
