@@ -6,8 +6,9 @@
     "outDir": "./dist",
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    // Vercel's resolver needs import-based resolution for dual ESM/CJS packages.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "target": "ES2023",
     "ignoreDeprecations": "6.0",
     // For nodejs:
