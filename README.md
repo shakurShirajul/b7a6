@@ -36,6 +36,23 @@ Google -> OAuth 2.0 + PKCE callback -> local refresh session
 
 The application is a modular Express service. Controllers own HTTP response semantics, Zod schemas normalize all route input, services enforce ownership and state transitions, and Prisma transactions protect multi-record workflows. Audit logs are append-only. Matching and email work is written to an outbox in the same database transaction as the domain change. By default, verification awaits matching and acknowledges its matching events on success. Email work and pending recovery jobs are published to BullMQ when Redis is configured; a running worker must process them.
 
+## Code organization
+
+| Location                                  | Responsibility                                                                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app.ts`                              | Express application, middleware, health endpoints, and active route registration.                                                                  |
+| `src/server.ts`                           | Standalone HTTP server entry point.                                                                                                                |
+| `src/modules/`                            | Authentication, users, patients, donors, hospitals, blood requests, assignments, donations, matching, payments, notifications, and administration. |
+| `src/shared/request-user.ts`              | Typed access to the authenticated request user; throws `401` when authentication is missing. Route middleware still enforces roles.                |
+| `src/shared/validation.ts`                | Shared phone validation used by registration, user, patient, and admin input schemas.                                                              |
+| `src/shared/`                             | Shared audit, cache, locking, and Redis utilities.                                                                                                 |
+| `src/jobs/worker.ts`                      | Separate worker process entry point for matching, notifications, expiration, and outbox recovery.                                                  |
+| `src/scripts/`                            | Demo seeding and targeted demo-admin credential recovery.                                                                                          |
+| `prisma/schema/` and `prisma/migrations/` | Database models and versioned migrations.                                                                                                          |
+| `src/generated/prisma/` and `dist/`       | Generated client and compiled output; regenerate from source.                                                                                      |
+
+The obsolete `profile` and `request` modules have been removed. Profile operations use `/api/v1/users/me`, `/api/v1/patients/me`, and `/api/v1/donors/me`; blood-request and assignment operations use `/api/v1/blood-requests` and `/api/v1/donor-assignments`. The removed routers were never mounted in the active application. Unused matching aliases, unused types, and the unused Supertest development dependencies have also been removed.
+
 ## Stack
 
 - Node.js, TypeScript, Express 5
@@ -225,15 +242,31 @@ For the current Vercel deployment, configure the following exact callback and we
 
 Create separate Stripe webhook endpoints and signing secrets for test and live mode. Subscribe only to the event types handled by the payment service, including Checkout completion/expiry, asynchronous payment results, PaymentIntent results, charges refunded, and refund lifecycle events. A frontend must serve the two Checkout return paths; redirects are informational and never authorize a payment state change—the signed webhook remains authoritative.
 
-## CI
+## Validation and CI
 
-The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lockfile-frozen installation, Prisma validation/generation, migrations against an ephemeral PostgreSQL service, lint, the standard `pnpm test` command, and the TypeScript build. It also starts an ephemeral Redis service for future integration coverage. The repository includes readiness tests in `src/readiness.test.ts`. `pnpm test` still uses `--passWithNoTests`, so check the reported test count as well as the exit code. Unit tests do not establish production Google consent, Stripe webhook delivery, or background-worker operation; verify these separately with the smoke procedure. CI values are non-secret test placeholders and must never be reused in a deployment.
+Run the following checks before deploying a code change:
+
+```bash
+pnpm exec tsc --noEmit --noUnusedLocals --noUnusedParameters
+pnpm lint
+pnpm test --exclude 'dist/**'
+pnpm build
+pnpm format
+```
+
+The stricter TypeScript command checks unused local declarations and parameters in addition to normal type checking. It does not detect every unused export or unreachable module; those require reference and entry-point review. `pnpm format` checks the configured source files; check documentation separately with `pnpm exec prettier --check README.md`.
+
+The current source test suite contains six readiness tests in [src/readiness.test.ts](src/readiness.test.ts). `pnpm test` retains `--passWithNoTests`, so inspect the test count as well as the exit code. Exclude `dist/**` when running source tests after a build to avoid discovering compiled test copies or stale compiled tests.
+
+The cleanup was also checked locally with API startup, `/health`, 39 protected routes returning `401` without authentication, authenticated-user access, and phone validation. These were manual smoke checks, not committed integration tests. They do not establish successful authenticated donation workflows, Google consent, Stripe webhook delivery, or background-worker operation. Verify those against the deployed revision using the procedure below.
+
+The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lockfile-frozen installation, Prisma validation/generation, migrations against ephemeral PostgreSQL, lint, `pnpm test`, and the TypeScript build. It also starts an ephemeral Redis service. The stricter unused-code and formatting checks above are local checks, not additional CI steps. CI values are non-secret test placeholders and must never be reused in a deployment.
 
 ## Production smoke procedure
 
 Run this procedure manually only after an approved deployment. Use disposable demo accounts/data, Stripe **test mode**, and a private Postman environment copied from `postman/Local.postman_environment.json`; never export populated current values or commit access tokens, passwords, cookies, provider secrets, or resource IDs.
 
-1. Set `baseUrl` to `https://<api-host>`. Verify `/health` returns process-only `200` and `/ready` returns dependency-aware `200`; save status/timing evidence without response headers that may contain cookies.
+1. Set `baseUrl` to `https://b7a6-iota.vercel.app` for the current production API (without `/api/v1`; the collection includes it). Verify `/health` returns process-only `200` and `/ready` returns dependency-aware `200`; save status/timing evidence without response headers that may contain cookies.
 2. Log in as the seeded patient, donor, and admin. Refresh one session and verify refresh-token rotation, then confirm the old cookie no longer refreshes. Keep tokens only in Postman's local current values.
 3. Run the three role-boundary samples: donor calling an admin endpoint, patient calling a donor-only endpoint, and an unauthenticated protected request. Expect `403`, `403`, and `401` respectively; confirm no protected record is returned.
 4. Run the happy-path folder sequence: patient lists a verified hospital and creates a fresh future-dated request; admin verifies it; check `matching.status` (wait for the worker in `WORKER` mode); donor lists and accepts the invitation; admin completes the assignment. Confirm the request, reservation, donation, and counters reach the documented states.
@@ -260,6 +293,7 @@ Run this procedure manually only after an approved deployment. Use disposable de
 | `pnpm lint`                                  | Run ESLint.                                             |
 | `pnpm format`                                | Check configured source files with Prettier.            |
 | `pnpm test`                                  | Run Vitest; currently permits zero test files.          |
+| `pnpm test --exclude 'dist/**'`              | Run source tests without compiled copies.               |
 | `pnpm test:watch`                            | Run Vitest in watch mode.                               |
 | `pnpm test:coverage`                         | Run Vitest with coverage.                               |
 | `pnpm seed:admin`                            | Alias the repeatable full demo seed.                    |
