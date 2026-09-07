@@ -1,4 +1,4 @@
-import { BloodType } from "../../../prisma/generated/prisma/enums";
+import { BloodType } from "../../generated/prisma/enums.js";
 
 export interface PatientProfile {
   id?: number;
@@ -14,7 +14,8 @@ export interface DonorProfile {
   district: string;
   area: string;
   bloodType: BloodType;
-  totalDontationCount: number;
+  weightKg: number;
+  totalDonationCount: number;
   isAvailable: boolean;
-  lastDonationDate: Date;
+  lastDonationDate?: Date;
 }

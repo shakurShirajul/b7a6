@@ -1,0 +1,1183 @@
+{
+  "info": {
+    "_postman_id": "b7a60000-0000-4000-8000-000000000012",
+    "name": "Blood Donation Platform",
+    "description": "Runnable examples for every mounted API endpoint. Import the Local environment, set demoPassword to the value used for DEMO_PASSWORD, and run folders in order. Non-linear alternatives and real-provider callback/webhook requests are skipped by default through explicit collection flags. Scripts only chain workflow state into collection variables; no secret has an initial value. See docs/api-workflows.md for exact access, inputs, successes, errors, and workflow constraints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const futureRequiredAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();",
+          "const assessmentExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();",
+          "pm.collectionVariables.set('futureRequiredAt', futureRequiredAt);",
+          "pm.collectionVariables.set('assessmentExpiresAt', assessmentExpiresAt);"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "patientAccessToken", "value": "", "type": "string" },
+    { "key": "refreshedAccessToken", "value": "", "type": "string" },
+    { "key": "donorAccessToken", "value": "", "type": "string" },
+    { "key": "adminAccessToken", "value": "", "type": "string" },
+    { "key": "hospitalId", "value": "", "type": "string" },
+    { "key": "createdHospitalId", "value": "", "type": "string" },
+    { "key": "bloodRequestId", "value": "", "type": "string" },
+    { "key": "cancelBloodRequestId", "value": "", "type": "string" },
+    { "key": "deleteBloodRequestId", "value": "", "type": "string" },
+    { "key": "assignmentId", "value": "", "type": "string" },
+    { "key": "rejectAssignmentId", "value": "", "type": "string" },
+    { "key": "donorId", "value": "", "type": "string" },
+    { "key": "moderationDonorId", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" },
+    { "key": "cancelPaymentId", "value": "", "type": "string" },
+    { "key": "refundPaymentId", "value": "", "type": "string" },
+    { "key": "otherUserId", "value": "", "type": "string" },
+    { "key": "futureRequiredAt", "value": "", "type": "string" },
+    { "key": "assessmentExpiresAt", "value": "", "type": "string" },
+    { "key": "runAlternativeBranches", "value": "false", "type": "string" },
+    { "key": "runGoogleOAuthRequests", "value": "false", "type": "string" },
+    { "key": "runStripeWebhookRequest", "value": "false", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "Public. Success: 200 Service is healthy."
+          }
+        },
+        {
+          "name": "Readiness check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/ready",
+            "description": "Public dependency probe. Success: 200 Service is ready. A redacted 503 means PostgreSQL or required Redis is unavailable."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Demo Patient\",\n  \"email\": \"{{newPatientEmail}}\",\n  \"password\": \"{{demoPassword}}\",\n  \"phone\": \"+8801700000300\",\n  \"role\": \"PATIENT\",\n  \"bloodType\": \"A_POSITIVE\",\n  \"dateOfBirth\": \"1994-04-15\",\n  \"emergencyContactName\": \"Demo Contact\",\n  \"emergencyContactPhone\": \"+8801700000301\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "Public; JSON. Success: 201 user without credentials. Common: 400 validation, 409 duplicate email, 429 rate limit. Change newPatientEmail before rerunning."
+          }
+        },
+        {
+          "name": "Login patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.accessToken) pm.collectionVariables.set('patientAccessToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "Public; stores the patient access token and refresh cookie. Success 200. Common: 401 credentials, 403 inactive, 429."
+          }
+        },
+        {
+          "name": "Login donor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.accessToken) pm.collectionVariables.set('donorAccessToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{donorEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "Public; stores the donor access token. Success 200."
+          }
+        },
+        {
+          "name": "Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.accessToken) pm.collectionVariables.set('adminAccessToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "Public; stores the admin access token. Success 200."
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.accessToken) pm.collectionVariables.set('refreshedAccessToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/v1/auth/refresh-token",
+            "description": "Uses the refreshToken cookie from the most recent login and rotates it. The script stores the result separately as refreshedAccessToken because the cookie identity depends on which login ran last."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "Revokes the cookie session when present and clears it. Run after cookie-dependent demonstrations. Success 200 and null data."
+          }
+        },
+        {
+          "name": "Start Google login or authenticated linking",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('runGoogleOAuthRequests') !== 'true') {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{googleLinkAccessToken}}",
+                "disabled": true
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/google",
+            "description": "Manual, skipped by default. For first-time linking: sign in with email/password as the intended real Google-email owner, set the private googleLinkAccessToken environment value, enable this request's Authorization header, set runGoogleOAuthRequests=true, and disable automatic redirects. The 302 Location and signed cookie bind this user to state/PKCE. Keep the cookie in this Postman jar, complete consent in a browser, and copy the unused code/state from the callback URL for the callback request. The browser callback returns 401 if it lacks this jar's cookie; it does not redeem the code. If a same-cookie browser client already redeemed it successfully, do not replay. Public Google login leaves the header disabled and succeeds only for an already linked provider account. No .local seed email can be used as a real Google email. Never forward the local Bearer header to Google."
+          }
+        },
+        {
+          "name": "Google callback",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('runGoogleOAuthRequests') !== 'true') {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/google/callback?code={{googleAuthorizationCode}}&state={{googleState}}",
+            "description": "Manual, skipped by default. Set googleAuthorizationCode/googleState from the real unused callback URL and run within ten minutes with the signed cookie from the start request in the same Postman jar. First-time linking requires that the start carried a valid Bearer token and that its current active user email matches Google's verified email. Public first-time linking returns 409 with sign-in instructions; already linked Google accounts may log in publicly. Cross-user links return 409. Each callback code is single-use."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patient",
+      "item": [
+        {
+          "name": "Get current user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/me",
+            "description": "PATIENT/DONOR/ADMIN. Success 200 with safe user and role profile."
+          }
+        },
+        {
+          "name": "Update current user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Demo Patient\",\n  \"avatar\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/me",
+            "description": "PATIENT/DONOR/ADMIN; at least one allowed field. Success 200."
+          }
+        },
+        {
+          "name": "Get patient profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/patients/me",
+            "description": "PATIENT only. Success 200; common 401/403/404."
+          }
+        },
+        {
+          "name": "Update patient profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergencyContactName\": \"Demo Emergency Contact\",\n  \"emergencyContactPhone\": \"+8801700000099\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/patients/me",
+            "description": "PATIENT only; at least one field. Success 200."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Donor",
+      "item": [
+        {
+          "name": "Get donor profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.id) pm.collectionVariables.set('donorId', String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/donors/me",
+            "description": "DONOR only. Stores the donor profile ID for admin moderation."
+          }
+        },
+        {
+          "name": "Update donor profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{donorAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Dhaka\",\n  \"district\": \"Dhaka\",\n  \"area\": \"Dhanmondi\",\n  \"latitude\": 23.746466,\n  \"longitude\": 90.376015\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/donors/me",
+            "description": "DONOR only. Eligibility evidence changes require re-verification and disable availability; using the seed's unchanged values avoids that transition."
+          }
+        },
+        {
+          "name": "Update donor availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{donorAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"isAvailable\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/donors/me/availability",
+            "description": "DONOR only. Enabling requires every effective eligibility rule to pass."
+          }
+        },
+        {
+          "name": "Get donation history",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/donors/me/donations?page=1&limit=10",
+            "description": "DONOR only. Paginated success 200."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hospitals",
+      "item": [
+        {
+          "name": "List hospitals",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (Array.isArray(json.data) && json.data[0]) pm.collectionVariables.set('hospitalId', String(json.data[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/hospitals?page=1&limit=10&division=Dhaka",
+            "description": "All authenticated roles. Stores the first visible verified hospital ID."
+          }
+        },
+        {
+          "name": "Get hospital",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/hospitals/{{hospitalId}}",
+            "description": "All authenticated roles. Success 200; common 400/401/403/404."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blood Request Lifecycle",
+      "item": [
+        {
+          "name": "Create blood request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.id) pm.collectionVariables.set('bloodRequestId', String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hospitalId\": {{hospitalId}},\n  \"bloodType\": \"A_POSITIVE\",\n  \"unitsRequired\": 2,\n  \"urgency\": \"EMERGENCY\",\n  \"description\": \"Postman lifecycle request\",\n  \"proofUrl\": \"https://example.invalid/postman-proof\",\n  \"requiredAt\": \"{{futureRequiredAt}}\",\n  \"division\": \"Dhaka\",\n  \"district\": \"Dhaka\",\n  \"area\": \"Shahbagh\",\n  \"latitude\": 23.72575,\n  \"longitude\": 90.397981\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/blood-requests",
+            "description": "PATIENT only. Stores the created pending request ID. A verified active hospital and a future date are required. Creation is limited to 10 attempts per user per 15 minutes in addition to the global limit; excess attempts return structured 429."
+          }
+        },
+        {
+          "name": "List visible blood requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/blood-requests?page=1&limit=10&sortBy=requiredAt&sortOrder=asc",
+            "description": "All authenticated roles with role-sensitive visibility."
+          }
+        },
+        {
+          "name": "List my blood requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/blood-requests/mine?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+            "description": "PATIENT only. Paginated owner list."
+          }
+        },
+        {
+          "name": "Get blood request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/blood-requests/{{bloodRequestId}}",
+            "description": "All authenticated roles, subject to visibility."
+          }
+        },
+        {
+          "name": "Update pending blood request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitsRequired\": 2,\n  \"description\": \"Updated Postman lifecycle request\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/blood-requests/{{bloodRequestId}}",
+            "description": "Owning PATIENT only and only while PENDING_VERIFICATION. Run before verification."
+          }
+        },
+        {
+          "name": "Verify blood request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"VERIFIED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/blood-requests/{{bloodRequestId}}/verify",
+            "description": "ADMIN only. Verification durably queues matching by current request urgency, then deadline. Run workers before listing assignments; work stays recoverable until worker acknowledgement."
+          }
+        },
+        {
+          "name": "Create request for cancellation branch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.id) pm.collectionVariables.set('cancelBloodRequestId', String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hospitalId\": {{hospitalId}},\n  \"bloodType\": \"A_POSITIVE\",\n  \"unitsRequired\": 1,\n  \"urgency\": \"NORMAL\",\n  \"description\": \"Postman cancellation branch\",\n  \"requiredAt\": \"{{futureRequiredAt}}\",\n  \"division\": \"Dhaka\",\n  \"district\": \"Dhaka\",\n  \"area\": \"Shahbagh\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/blood-requests",
+            "description": "Creates an independent pending request so cancellation does not destroy the matching workflow's bloodRequestId."
+          }
+        },
+        {
+          "name": "Cancel blood request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/blood-requests/{{cancelBloodRequestId}}/cancel",
+            "description": "Owner PATIENT or ADMIN. Uses the independent cancellation branch ID and leaves the verified matching request active."
+          }
+        },
+        {
+          "name": "Create request for deletion branch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.id) pm.collectionVariables.set('deleteBloodRequestId', String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hospitalId\": {{hospitalId}},\n  \"bloodType\": \"A_POSITIVE\",\n  \"unitsRequired\": 1,\n  \"urgency\": \"NORMAL\",\n  \"description\": \"Postman deletion branch\",\n  \"requiredAt\": \"{{futureRequiredAt}}\",\n  \"division\": \"Dhaka\",\n  \"district\": \"Dhaka\",\n  \"area\": \"Shahbagh\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/blood-requests",
+            "description": "Creates an independent pending request for the soft-deletion endpoint."
+          }
+        },
+        {
+          "name": "Delete blood request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/blood-requests/{{deleteBloodRequestId}}",
+            "description": "Owner PATIENT or ADMIN; soft-deletes the independent pending branch and leaves the matching request active."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assignments/Donations",
+      "item": [
+        {
+          "name": "List my assignments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (Array.isArray(json.data) && json.data[0]) pm.collectionVariables.set('assignmentId', String(json.data[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/donor-assignments/mine?page=1&limit=10&status=INVITED",
+            "description": "DONOR only. Stores the first invitation. Matching is asynchronous; retry after the worker processes the verified request."
+          }
+        },
+        {
+          "name": "Accept assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/donor-assignments/{{assignmentId}}/accept",
+            "description": "Assigned DONOR only. Capacity-safe acceptance creates a time-limited reservation and locks/rechecks the current verified, nondeleted hospital."
+          }
+        },
+        {
+          "name": "Reject assignment",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('runAlternativeBranches') !== 'true') {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{donorAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reasonCode\": \"SCHEDULING_CONFLICT\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/donor-assignments/{{rejectAssignmentId}}/reject",
+            "description": "Non-linear alternative; skipped by default. Prepare a separate INVITED assignment owned by this donor, put its ID in rejectAssignmentId, set runAlternativeBranches=true, run this request individually, then reset the flag. It never consumes the accepted happy-path assignmentId."
+          }
+        },
+        {
+          "name": "Complete donation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitCount\": 1,\n  \"donatedAt\": \"{{$isoTimestamp}}\",\n  \"notes\": \"Confirmed by demo hospital\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/assignments/{{assignmentId}}/complete",
+            "description": "ADMIN only; requires an accepted, unexpired reservation. Idempotent for an already-completed assignment."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (Array.isArray(json.data) && json.data[0]) pm.collectionVariables.set('notificationId', String(json.data[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/notifications?page=1&limit=10&unread=true",
+            "description": "All authenticated roles; owner-scoped. Stores the first notification ID."
+          }
+        },
+        {
+          "name": "Mark notification read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/read",
+            "description": "Notification owner only. Repeat is idempotent."
+          }
+        },
+        {
+          "name": "Mark all notifications read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/notifications/read-all",
+            "description": "All authenticated roles; updates only the current user's unread notifications."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Checkout Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.payment && json.data.payment.id) pm.collectionVariables.set('paymentId', String(json.data.payment.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purpose\": \"EMERGENCY_SUPPORT\",\n  \"amount\": \"500\",\n  \"currency\": \"BDT\",\n  \"bloodRequestId\": {{bloodRequestId}}\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/checkout-sessions",
+            "description": "PATIENT or DONOR. Requires real Stripe test configuration. Stores paymentId and returns a hosted checkoutUrl. Limited to 10 creation attempts per user per 15 minutes in addition to the global limit; excess attempts return structured 429."
+          }
+        },
+        {
+          "name": "Stripe webhook",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('runStripeWebhookRequest') !== 'true') {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Stripe-Signature", "value": "{{stripeSignature}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{{stripeWebhookPayload}}" },
+            "url": "{{baseUrl}}/api/v1/payments/webhook",
+            "description": "Manual provider flow; skipped by default. Payload and signature must be a matching genuine pair. Set the secret environment placeholders and run individually with runStripeWebhookRequest=true, or prefer Stripe CLI forwarding."
+          }
+        },
+        {
+          "name": "List my payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/payments/mine?page=1&limit=10&purpose=EMERGENCY_SUPPORT",
+            "description": "PATIENT or DONOR; owner-scoped pagination."
+          }
+        },
+        {
+          "name": "Get payment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}",
+            "description": "Payer or ADMIN. Success 200; other users receive 403."
+          }
+        },
+        {
+          "name": "Cancel payment",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('runAlternativeBranches') !== 'true') {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/payments/{{cancelPaymentId}}/cancel",
+            "description": "Non-linear alternative; skipped by default. Prepare a separate OPEN, not-completed Checkout owned by the patient, set cancelPaymentId and runAlternativeBranches=true, run individually, then reset the flag. It never cancels the happy-path paymentId."
+          }
+        },
+        {
+          "name": "Refund payment",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('runAlternativeBranches') !== 'true') {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/payments/{{refundPaymentId}}/refund",
+            "description": "Non-linear alternative; skipped by default. Prepare a separate PAID payment with a PaymentIntent, set refundPaymentId and runAlternativeBranches=true, run individually, then reset the flag. Final status remains webhook-driven."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  const candidate = Array.isArray(json.data) ? json.data.find((user) => user.role !== 'ADMIN') : null;",
+                  "  if (candidate) pm.collectionVariables.set('otherUserId', String(candidate.id));",
+                  "  const donorCandidate = Array.isArray(json.data) ? json.data.find((user) => user.donorProfile && String(user.donorProfile.id) !== pm.collectionVariables.get('donorId')) : null;",
+                  "  if (donorCandidate) pm.collectionVariables.set('moderationDonorId', String(donorCandidate.donorProfile.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/users?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+            "description": "ADMIN only. Stores a non-admin user ID and, when available, a donor profile ID distinct from the lifecycle donor."
+          }
+        },
+        {
+          "name": "Update user status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ACTIVE\"\n}" },
+            "url": "{{baseUrl}}/api/v1/admin/users/{{otherUserId}}/status",
+            "description": "ADMIN only. Defaults to the non-destructive ACTIVE transition; self-suspension is blocked."
+          }
+        },
+        {
+          "name": "Create hospital",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.id) pm.collectionVariables.set('createdHospitalId', String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Demo Hospital\",\n  \"address\": \"1 Demo Road, Dhaka\",\n  \"contactPhone\": \"+8801700000400\",\n  \"contactEmail\": \"hospital.postman@blood.local\",\n  \"division\": \"Dhaka\",\n  \"district\": \"Dhaka\",\n  \"area\": \"Shahbagh\",\n  \"latitude\": 23.73,\n  \"longitude\": 90.4,\n  \"verificationStatus\": \"PENDING\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/hospitals",
+            "description": "ADMIN only. Stores createdHospitalId. Change name/address before rerunning because the pair is unique."
+          }
+        },
+        {
+          "name": "Update hospital",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"UPDATE\",\n  \"contactPhone\": \"+8801700000401\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/hospitals/{{createdHospitalId}}",
+            "description": "ADMIN only. Body is one of UPDATE, VERIFY, or DELETE actions. Rejection/deletion and verification-sensitive evidence edits return 409 while any pending/verified/matching/partially fulfilled request exists."
+          }
+        },
+        {
+          "name": "Verify donor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"VERIFIED\",\n  \"isEligible\": true,\n  \"reasonCode\": \"CLEARED\",\n  \"expiresAt\": \"{{assessmentExpiresAt}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/donors/{{moderationDonorId}}/verify",
+            "description": "ADMIN only. Uses a donor distinct from the completed lifecycle donor when the user list provided one. Expiry must be in the next year and cross-field/policy rules apply. User/profile evidence is locked and reread before review; later evidence edits revoke verification. Contention can return 409 after bounded retries."
+          }
+        },
+        {
+          "name": "Rematch blood request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"radiusKm\": 50\n}" },
+            "url": "{{baseUrl}}/api/v1/admin/blood-requests/{{bloodRequestId}}/rematch",
+            "description": "ADMIN only; request must be active/unfulfilled/not overdue. Radius must equal configured default or maximum; sample assumes defaults."
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/dashboard",
+            "description": "ADMIN only. Optional from/to ISO date filters."
+          }
+        },
+        {
+          "name": "Donation report",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/reports/donations?bloodType=A_POSITIVE&division=Dhaka",
+            "description": "ADMIN only. Optional date, blood type, and location filters."
+          }
+        },
+        {
+          "name": "Audit logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/audit-logs?page=1&limit=10&sortOrder=desc",
+            "description": "ADMIN only. Append-only audit history with optional actor/action/entity/date filters."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Errors/RBAC",
+      "item": [
+        {
+          "name": "401 - Missing bearer token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/me",
+            "description": "Expected 401 Authorization token is required."
+          }
+        },
+        {
+          "name": "403 - Donor calls admin dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{donorAccessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/dashboard",
+            "description": "Expected 403 role denial."
+          }
+        },
+        {
+          "name": "403 - Patient calls donor profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/donors/me",
+            "description": "Expected 403 role denial."
+          }
+        },
+        {
+          "name": "400 - Invalid registration",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"not-an-email\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "Expected 400 validation; also demonstrates that public admin registration is impossible."
+          }
+        },
+        {
+          "name": "404 - Unknown hospital",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientAccessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/hospitals/2147483647",
+            "description": "Expected 404 Hospital not found."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,17 @@
-export class AppError extends Error {
-    statusCode: number;
+export type ErrorDetail = {
+  path: string;
+  message: string;
+};
 
-    constructor(statusCode: number, message: string) {
-        super(message);
-        this.statusCode = statusCode;
-    }
+export class AppError extends Error {
+  statusCode: number;
+  errors: ErrorDetail[];
+
+  constructor(statusCode: number, message: string, errors: ErrorDetail[] = []) {
+    super(message);
+    this.name = "AppError";
+    this.statusCode = statusCode;
+    this.errors = errors;
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
 }

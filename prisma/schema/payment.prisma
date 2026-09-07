@@ -1,0 +1,43 @@
+model Payment {
+  id                  Int            @id @default(autoincrement())
+  payerId             Int
+  bloodRequestId      Int?
+  purpose             PaymentPurpose
+  amount              Int
+  currency            String         @db.VarChar(3)
+  checkoutSessionId   String?        @unique
+  paymentIntentId     String?        @unique
+  refundId            String?        @unique
+  refundStatus        String?        @db.VarChar(32)
+  idempotencyKey      String         @unique
+  status              PaymentStatus  @default(INITIATED)
+  checkoutCompletedAt DateTime?
+  refundRequestedAt   DateTime?
+  paidAt              DateTime?
+  refundedAt          DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  payer        User           @relation(fields: [payerId], references: [id], onDelete: Restrict)
+  bloodRequest BloodRequest?  @relation(fields: [bloodRequestId], references: [id], onDelete: SetNull)
+  events       PaymentEvent[]
+
+  @@index([payerId, status])
+  @@index([bloodRequestId, status])
+}
+
+model PaymentEvent {
+  id              Int       @id @default(autoincrement())
+  stripeEventId   String    @unique
+  type            String
+  paymentId       Int?
+  payload         Json
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  processingError String?
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId, receivedAt])
+  @@index([processedAt])
+}

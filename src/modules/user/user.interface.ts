@@ -1,9 +1,9 @@
-import { Role } from "../../../prisma/generated/prisma/enums"
+import type { Gender } from "../../generated/prisma/enums.js";
 
-export interface RegisterUserPayload{
-    name: string
-    email: string
-    role: Role
-    password: string
-    phone: string
-}
+export type UpdateMyProfilePayload = {
+  name?: string;
+  phone?: string;
+  avatar?: string | null;
+  dateOfBirth?: Date | null;
+  gender?: Gender | null;
+};

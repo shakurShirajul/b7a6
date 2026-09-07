@@ -1,16 +1,17 @@
 model PatientProfile {
-  id                 Int       @id @default(autoincrement())
-  userId             Int       @unique
-  totalReceivedCount Int       @default(0)
-  bloodType          BloodType
+  id                    Int       @id @default(autoincrement())
+  userId                Int       @unique
+  bloodType             BloodType
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  totalReceivedCount    Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
   bloodRequests BloodRequest[]
-  donorRequests donorRequest[]
+  donations     Donation[]
 
-  @@index([userId])
   @@index([bloodType])
 }

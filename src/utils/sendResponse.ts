@@ -15,11 +15,13 @@ type TResponseData<T> = {
 };
 
 export const sendResponse = <T>(res: Response, data: TResponseData<T>) => {
-  res.status(data.statusCode).json({
+  const response = {
     success: data.success,
     statusCode: data.statusCode,
     message: data.message,
     data: data.data,
-    meta: data.meta,
-  });
+    ...(data.meta ? { meta: data.meta } : {}),
+  };
+
+  return res.status(data.statusCode).json(response);
 };

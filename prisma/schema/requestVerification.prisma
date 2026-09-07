@@ -1,0 +1,14 @@
+model RequestVerification {
+  id             Int                @id @default(autoincrement())
+  bloodRequestId Int
+  adminId        Int
+  decision       VerificationStatus
+  reasonCode     String?
+  createdAt      DateTime           @default(now())
+
+  bloodRequest BloodRequest @relation(fields: [bloodRequestId], references: [id], onDelete: Cascade)
+  admin        User         @relation("RequestVerifiedBy", fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([bloodRequestId, createdAt])
+  @@index([adminId, createdAt])
+}

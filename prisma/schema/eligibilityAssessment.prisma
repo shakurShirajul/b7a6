@@ -1,0 +1,16 @@
+model EligibilityAssessment {
+  id          Int      @id @default(autoincrement())
+  donorId     Int
+  isEligible  Boolean
+  reasonCode  String?
+  checkedById Int?
+  checkedAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  donor     DonorProfile @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  checkedBy User?        @relation("EligibilityCheckedBy", fields: [checkedById], references: [id], onDelete: SetNull)
+
+  @@unique([donorId, checkedAt])
+  @@index([donorId, expiresAt])
+  @@index([checkedById])
+}

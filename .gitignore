@@ -1,8 +1,9 @@
 node_modules
 .env
 dist
-docs
 prisma/generated/
+src/generated/
 .agents
 .codex
 /generated/prisma
+docs

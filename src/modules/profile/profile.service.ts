@@ -1,5 +1,5 @@
-import { prisma } from "../../lib/prisma";
-import { DonorProfile, PatientProfile } from "./profile.interface";
+import { prisma } from "../../lib/prisma.js";
+import { DonorProfile, PatientProfile } from "./profile.interface.js";
 
 const insertDonorProfile = async (payload: DonorProfile) => {
   const donorProfile = await prisma.donorProfile.create({ data: payload });

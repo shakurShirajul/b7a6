@@ -1,15 +1,57 @@
-import dotenv from "dotenv";
-import path from "path";
-
-dotenv.config({ path: path.join(process.cwd(), ".env") });
+import { env } from "./env.js";
 
 export default {
-    port : process.env.PORT,
-    database_url : process.env.DATABASE_URL,
-    app_url : process.env.APP_URL,
-    bcrypt_salt_rounds : process.env.BCRYPT_SALT_ROUNDS,
-    jwt_access_secret : process.env.JWT_ACCESS_TOKEN_SECRET!,
-    jwt_refresh_secret : process.env.JWT_REFRESH_TOKEN_SECRET!,
-    jwt_access_expires_in : process.env.JWT_ACCESS_TOKEN_EXPIRATION!,
-    jwt_refresh_expires_in : process.env.JWT_REFRESH_TOKEN_EXPIRATION!,
-}
+  port: env.PORT,
+  database_url: env.DATABASE_URL,
+  database: {
+    connection_timeout_ms: env.DATABASE_CONNECTION_TIMEOUT_MS,
+    query_timeout_ms: env.DATABASE_QUERY_TIMEOUT_MS,
+    statement_timeout_ms: env.DATABASE_STATEMENT_TIMEOUT_MS,
+  },
+  app_url: env.APP_URL,
+  cors_origins: env.CORS_ORIGINS,
+  trust_proxy_hops: env.TRUST_PROXY_HOPS,
+  bcrypt_salt_rounds: env.BCRYPT_SALT_ROUNDS,
+  jwt_access_secret: env.JWT_ACCESS_TOKEN_SECRET,
+  jwt_refresh_secret: env.JWT_REFRESH_TOKEN_SECRET,
+  jwt_access_expires_in: env.JWT_ACCESS_TOKEN_EXPIRATION,
+  jwt_refresh_expires_in: env.JWT_REFRESH_TOKEN_EXPIRATION,
+  google_client_id: env.GOOGLE_CLIENT_ID,
+  google_client_secret: env.GOOGLE_CLIENT_SECRET,
+  google_callback_url: env.GOOGLE_CALLBACK_URL,
+  google_oauth_state_secret:
+    env.GOOGLE_OAUTH_STATE_SECRET ?? env.JWT_REFRESH_TOKEN_SECRET,
+  redis_url: env.REDIS_URL,
+  redis_command_timeout_ms: env.REDIS_COMMAND_TIMEOUT_MS,
+  readiness_timeout_ms: env.READINESS_TIMEOUT_MS,
+  email: {
+    smtp_host: env.SMTP_HOST,
+    smtp_port: env.SMTP_PORT,
+    smtp_secure: env.SMTP_SECURE,
+    smtp_user: env.SMTP_USER,
+    smtp_password: env.SMTP_PASSWORD,
+    from: env.EMAIL_FROM,
+  },
+  donor_policy: {
+    min_age_years: env.DONOR_MIN_AGE_YEARS,
+    max_age_years: env.DONOR_MAX_AGE_YEARS,
+    min_weight_kg: env.DONOR_MIN_WEIGHT_KG,
+    min_donation_interval_days: env.DONOR_MIN_DONATION_INTERVAL_DAYS,
+  },
+  matching: {
+    default_radius_km: env.MATCHING_DEFAULT_RADIUS_KM,
+    max_radius_km: env.MATCHING_MAX_RADIUS_KM,
+    max_candidates: env.MATCHING_MAX_CANDIDATES,
+    max_invitations: env.MATCHING_MAX_INVITATIONS,
+    invitation_ttl_minutes: env.DONOR_INVITATION_TTL_MINUTES,
+    expiration_batch_size: env.EXPIRATION_BATCH_SIZE,
+  },
+  stripe: {
+    secret_key: env.STRIPE_SECRET_KEY,
+    livemode: env.STRIPE_SECRET_KEY.startsWith("sk_live_"),
+    webhook_secret: env.STRIPE_WEBHOOK_SECRET,
+    currency: env.STRIPE_CURRENCY,
+    payment_min_minor_units: env.PAYMENT_MIN_MINOR_UNITS,
+    payment_max_minor_units: env.PAYMENT_MAX_MINOR_UNITS,
+  },
+};

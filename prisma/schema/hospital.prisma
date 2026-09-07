@@ -1,0 +1,28 @@
+model Hospital {
+  id                 Int                @id @default(autoincrement())
+  name               String
+  address            String
+  contactPhone       String
+  contactEmail       String?
+  division           String
+  district           String
+  area               String
+  latitude           Decimal?           @db.Decimal(9, 6)
+  longitude          Decimal?           @db.Decimal(9, 6)
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedById       Int?
+  deletedAt          DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  verifiedBy    User?          @relation("HospitalVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  bloodRequests BloodRequest[]
+
+  @@unique([name, address])
+  @@index([name])
+  @@index([verificationStatus, division, district, area])
+  @@index([latitude, longitude])
+  @@index([verifiedById])
+  @@index([deletedAt])
+}

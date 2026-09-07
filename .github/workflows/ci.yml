@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: blood_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d blood_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/blood_test
+      DATABASE_CONNECTION_TIMEOUT_MS: 5000
+      DATABASE_QUERY_TIMEOUT_MS: 15000
+      DATABASE_STATEMENT_TIMEOUT_MS: 15000
+      APP_URL: http://localhost:5000
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5000
+      TRUST_PROXY_HOPS: 0
+      BCRYPT_SALT_ROUNDS: 4
+      JWT_ACCESS_TOKEN_SECRET: ci-access-secret-not-for-production-000000
+      JWT_REFRESH_TOKEN_SECRET: ci-refresh-secret-not-for-production-0000
+      JWT_ACCESS_TOKEN_EXPIRATION: 15m
+      JWT_REFRESH_TOKEN_EXPIRATION: 7d
+      REDIS_URL: redis://localhost:6379
+      REDIS_COMMAND_TIMEOUT_MS: 1500
+      READINESS_TIMEOUT_MS: 1500
+      STRIPE_SECRET_KEY: sk_test_ci_placeholder_not_a_real_key
+      STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder_not_a_real_secret
+      STRIPE_CURRENCY: BDT
+      PAYMENT_MIN_MINOR_UNITS: 100
+      PAYMENT_MAX_MINOR_UNITS: 99999999
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: pnpm exec prisma validate
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations to test database
+        run: pnpm db:deploy
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

@@ -1,21 +1,75 @@
 enum Role {
-  DONOR
   PATIENT
+  DONOR
   ADMIN
 }
 
 enum UserStatus {
   ACTIVE
-  INACTIVE
+  SUSPENDED
+}
+
+enum VerificationStatus {
   PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum Urgency {
+  NORMAL
+  HIGH
+  EMERGENCY
+}
+
+enum BloodRequestStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  MATCHING
+  PARTIALLY_FULFILLED
+  FULFILLED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum AssignmentStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  INITIATED
+  OPEN
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentPurpose {
+  EMERGENCY_SUPPORT
+  PLATFORM_SUPPORT
 }
 
 enum NotificationType {
   BLOOD_REQUEST
+  DONOR_INVITATION
   REQUEST_ACCEPTED
   REQUEST_REJECTED
   DONATION_COMPLETED
+  PAYMENT_UPDATED
   SYSTEM
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 enum BloodType {
@@ -33,11 +87,4 @@ enum Gender {
   MALE
   FEMALE
   OTHER
-}
-
-enum RequestStatus {
-  PENDING
-  APPROVED
-  FULFILLED
-  REJECTED
 }

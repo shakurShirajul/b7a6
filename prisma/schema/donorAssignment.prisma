@@ -1,0 +1,26 @@
+model DonorAssignment {
+  id             Int              @id @default(autoincrement())
+  bloodRequestId Int
+  donorId        Int
+  status         AssignmentStatus @default(INVITED)
+  score          Decimal          @db.Decimal(12, 3)
+  distanceKm     Decimal?         @db.Decimal(8, 2)
+  matchReason    String?
+  invitedAt      DateTime         @default(now())
+  expiresAt      DateTime
+  respondedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  bloodRequest  BloodRequest      @relation(fields: [bloodRequestId], references: [id], onDelete: Cascade)
+  donor         DonorProfile      @relation(fields: [donorId], references: [id], onDelete: Restrict)
+  reservation   DonorReservation?
+  donation      Donation?
+  notifications Notification[]
+
+  @@unique([bloodRequestId, donorId])
+  @@unique([id, donorId, bloodRequestId])
+  @@index([donorId, status])
+  @@index([bloodRequestId, status])
+  @@index([status, expiresAt])
+}

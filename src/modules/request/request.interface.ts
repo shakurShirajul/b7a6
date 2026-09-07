@@ -1,25 +1,29 @@
-import { BloodType, RequestStatus } from "../../../prisma/generated/prisma/enums"
-
+import {
+  AssignmentStatus,
+  BloodRequestStatus,
+  BloodType,
+  Urgency,
+} from "../../generated/prisma/enums.js";
 
 export interface BloodRequest {
-    id?: number
-    patientId: number
-    bloodType: BloodType
-    quantity: number
-    status: RequestStatus
-    isUrgent: boolean
-    requestedAt: Date
-    requiredAt: Date
-    fulfilledAt?: Date
-    description: string
-    division: string
-    district: string
-    area: string
-    hospitalName: string
+  id?: number;
+  patientId: number;
+  hospitalId: number;
+  bloodType: BloodType;
+  unitsRequired: number;
+  unitsFulfilled: number;
+  status: BloodRequestStatus;
+  urgency: Urgency;
+  requiredAt: Date;
+  fulfilledAt?: Date;
+  description: string;
+  division: string;
+  district: string;
+  area: string;
 }
 
-export interface DonorRequest{
-    donorId?: number
-    bloodRequestId: number
-    status: RequestStatus
+export interface DonorAssignment {
+  donorId?: number;
+  bloodRequestId: number;
+  status: AssignmentStatus;
 }

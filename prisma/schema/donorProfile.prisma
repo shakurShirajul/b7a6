@@ -1,23 +1,33 @@
 model DonorProfile {
-  id                 Int       @id @default(autoincrement())
-  userId             Int       @unique
+  id                 Int                @id @default(autoincrement())
+  userId             Int                @unique
   bloodType          BloodType
-  isAvailable        Boolean   @default(true)
-  totalDonationCount Int       @default(0)
+  isAvailable        Boolean            @default(false)
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedById       Int?
+  weightKg           Decimal            @db.Decimal(5, 2)
+  totalDonationCount Int                @default(0)
   lastDonationDate   DateTime?
 
-  division String
-  district String
-  area     String
+  division  String
+  district  String
+  area      String
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  donorRequests donorRequest[]
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  verifiedBy             User?                   @relation("DonorProfileVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  eligibilityAssessments EligibilityAssessment[]
+  assignments            DonorAssignment[]
+  reservation            DonorReservation?
+  donations              Donation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
-  @@index([bloodType])
-  @@index([lastDonationDate])
-  @@index([isAvailable])
+  @@index([bloodType, verificationStatus, isAvailable, lastDonationDate])
+  @@index([division, district, area, bloodType])
+  @@index([latitude, longitude])
+  @@index([verifiedById])
 }

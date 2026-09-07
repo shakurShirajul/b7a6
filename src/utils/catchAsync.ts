@@ -8,4 +8,4 @@ export const catchAsync = (fn: RequestHandler) => {
       next(error);
     }
   };
-}
+};

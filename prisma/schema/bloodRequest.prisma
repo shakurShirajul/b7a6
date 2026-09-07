@@ -1,25 +1,45 @@
 model BloodRequest {
-  id          Int           @id @default(autoincrement())
-  patientId   Int
-  bloodType   BloodType
-  description String?
-  quantity    Int
-  status      RequestStatus @default(PENDING)
-  isUrgent    Boolean       @default(false)
+  id             Int                @id @default(autoincrement())
+  patientId      Int
+  hospitalId     Int
+  bloodType      BloodType
+  unitsRequired  Int
+  unitsFulfilled Int                @default(0)
+  urgency        Urgency            @default(NORMAL)
+  status         BloodRequestStatus @default(PENDING_VERIFICATION)
+  description    String?
+  proofUrl       String?
+  requiredAt     DateTime
+  verifiedAt     DateTime?
+  verifiedById   Int?
+  fulfilledAt    DateTime?
 
-  requestedAt  DateTime  @default(now())
-  requiredAt   DateTime
-  fullfilledAt DateTime?
+  division  String
+  district  String
+  area      String
+  latitude  Decimal?  @db.Decimal(9, 6)
+  longitude Decimal?  @db.Decimal(9, 6)
+  deletedAt DateTime?
 
-  division     String
-  district     String
-  area         String
-  hospitalName String
-
-  patient PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient       PatientProfile        @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  hospital      Hospital              @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  verifiedBy    User?                 @relation("BloodRequestVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifications RequestVerification[]
+  assignments   DonorAssignment[]
+  reservations  DonorReservation[]
+  donations     Donation[]
+  notifications Notification[]
+  payments      Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([patientId])
+  @@unique([id, patientId])
+  @@index([status, urgency, requiredAt])
+  @@index([bloodType, status, division, district, area])
+  @@index([latitude, longitude])
+  @@index([patientId, status])
+  @@index([hospitalId, status])
+  @@index([verifiedById])
+  @@index([deletedAt])
 }

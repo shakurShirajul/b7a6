@@ -1,0 +1,18 @@
+model OutboxEvent {
+  id               Int       @id @default(autoincrement())
+  type             String
+  aggregateId      String
+  deduplicationKey String?   @unique
+  payload          Json
+  attempts         Int       @default(0)
+  availableAt      DateTime  @default(now())
+  processedAt      DateTime?
+  completedAt      DateTime?
+  lastError        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([processedAt, availableAt])
+  @@index([completedAt, availableAt])
+  @@index([type, aggregateId])
+}

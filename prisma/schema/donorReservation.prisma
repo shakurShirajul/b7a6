@@ -1,0 +1,16 @@
+model DonorReservation {
+  id             Int      @id @default(autoincrement())
+  donorId        Int      @unique
+  assignmentId   Int      @unique
+  bloodRequestId Int
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  donor        DonorProfile    @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  assignment   DonorAssignment @relation(fields: [assignmentId, donorId, bloodRequestId], references: [id, donorId, bloodRequestId], onDelete: Cascade)
+  bloodRequest BloodRequest    @relation(fields: [bloodRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, donorId, bloodRequestId])
+  @@index([bloodRequestId, expiresAt])
+  @@index([expiresAt])
+}

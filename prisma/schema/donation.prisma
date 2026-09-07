@@ -1,0 +1,25 @@
+model Donation {
+  id             Int      @id @default(autoincrement())
+  assignmentId   Int      @unique
+  bloodRequestId Int
+  donorId        Int
+  patientId      Int
+  unitCount      Int
+  donatedAt      DateTime
+  confirmedById  Int
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assignment   DonorAssignment @relation(fields: [assignmentId, donorId, bloodRequestId], references: [id, donorId, bloodRequestId], onDelete: Restrict)
+  bloodRequest BloodRequest    @relation(fields: [bloodRequestId, patientId], references: [id, patientId], onDelete: Restrict)
+  donor        DonorProfile    @relation(fields: [donorId], references: [id], onDelete: Restrict)
+  patient      PatientProfile  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  confirmedBy  User            @relation("DonationConfirmedBy", fields: [confirmedById], references: [id], onDelete: Restrict)
+
+  @@unique([assignmentId, donorId, bloodRequestId])
+  @@index([donorId, donatedAt])
+  @@index([bloodRequestId])
+  @@index([patientId, donatedAt])
+  @@index([confirmedById])
+}

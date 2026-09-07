@@ -1,15 +1,24 @@
 model Notification {
-  id      Int    @id @default(autoincrement())
-  userId  Int
-  title   String
-  message String
+  id                Int                        @id @default(autoincrement())
+  userId            Int
+  bloodRequestId    Int?
+  donorAssignmentId Int?
+  title             String
+  message           String
+  type              NotificationType           @default(BLOOD_REQUEST)
+  readAt            DateTime?
+  deliveryStatus    NotificationDeliveryStatus @default(PENDING)
+  deliveredAt       DateTime?
+  deduplicationKey  String                     @unique
 
-  type NotificationType @default(BLOOD_REQUEST)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bloodRequest    BloodRequest?    @relation(fields: [bloodRequestId], references: [id], onDelete: Cascade)
+  donorAssignment DonorAssignment? @relation(fields: [donorAssignmentId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
+  @@index([userId, readAt, createdAt])
+  @@index([bloodRequestId])
+  @@index([donorAssignmentId])
 }
