@@ -7,7 +7,6 @@ A role-based backend for coordinating verified blood requests with eligible dono
 - [API workflow and endpoint reference](docs/api-workflows.md)
 - [Entity relationship diagram](docs/erd.md)
 - [Postman collection](postman/Blood-Donation-Platform.postman_collection.json)
-- [Local Postman environment](postman/Local.postman_environment.json)
 - [Submission checklist and video script](docs/submission-checklist.md)
 - Live API: [https://b7a6-iota.vercel.app](https://b7a6-iota.vercel.app)
 - API base URL: `https://b7a6-iota.vercel.app/api/v1`
@@ -121,7 +120,7 @@ The obsolete `profile` and `request` modules have been removed. Profile operatio
    pnpm dev:workers
    ```
 
-   The default Postman environment expects `http://localhost:5000`. Change its `baseUrl` if `PORT` differs. The API can start without Redis, but queued outbox publication is deferred; workers require `REDIS_URL`.
+   The self-contained Postman collection targets the production API at `https://b7a6-iota.vercel.app`. The API can start without Redis, but queued outbox publication is deferred; workers require `REDIS_URL`.
 
 ## Environment variables
 
@@ -264,7 +263,7 @@ The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci
 
 ## Production smoke procedure
 
-Run this procedure manually only after an approved deployment. Use disposable demo accounts/data, Stripe **test mode**, and a private Postman environment copied from `postman/Local.postman_environment.json`; never export populated current values or commit access tokens, passwords, cookies, provider secrets, or resource IDs.
+Run this procedure manually only after an approved deployment. Use disposable demo accounts/data, Stripe **test mode**, and a private copy of `postman/Blood-Donation-Platform.postman_collection.json`; never export populated current values or commit access tokens, passwords, cookies, provider secrets, or resource IDs.
 
 1. Set `baseUrl` to `https://b7a6-iota.vercel.app` for the current production API (without `/api/v1`; the collection includes it). Verify `/health` returns process-only `200` and `/ready` returns dependency-aware `200`; save status/timing evidence without response headers that may contain cookies.
 2. Log in as the seeded patient, donor, and admin. Refresh one session and verify refresh-token rotation, then confirm the old cookie no longer refreshes. Keep tokens only in Postman's local current values.
@@ -302,7 +301,7 @@ Run this procedure manually only after an approved deployment. Use disposable de
 
 ## Authentication and roles
 
-Password login returns a short-lived access token in JSON and a rotating refresh token in an HTTP-only `refreshToken` cookie scoped to `/api/v1/auth`. Send protected requests with `Authorization: Bearer <access-token>`. Postman retains the cookie automatically when requests use the same `baseUrl`.
+Password login returns a short-lived access token in JSON and a rotating refresh token in an HTTP-only `refreshToken` cookie scoped to `/api/v1/auth`. Send protected requests with `Authorization: Bearer <access-token>`. Postman retains the cookie automatically when requests use the same `baseUrl`. The collection saves role-specific access tokens in collection variables and configures Bearer authorization for each protected example; inherited collection authorization uses `activeAccessToken`.
 
 Self-registration accepts only `PATIENT` or `DONOR`; clients cannot register administrators. Admin users are created by the controlled seed or another trusted operational process. All authenticated users must remain `ACTIVE` and not soft-deleted. Role violations return `403`; missing, invalid, or expired access tokens return `401`.
 
@@ -354,15 +353,20 @@ The Postman webhook request contains signature/payload placeholders for document
 
 ## Postman quick start
 
-1. Import both files from `postman/` into a clean workspace.
-2. Select **Blood Donation Platform - Local**.
-3. Enter the same `demoPassword` value used for `DEMO_PASSWORD`. Do not save secrets to shared initial values or commit exported current values.
-4. Start the API and workers, then run requests in folder order. Login scripts save role-specific access tokens; list/create scripts save resource IDs as collection variables. Non-linear alternatives and external callback/webhook examples are skipped by default, so they cannot consume happy-path state.
-5. A complete lifecycle needs a fresh future-dated request. Verification runs matching inline by default. In `WORKER` mode, wait for worker processing before listing donor assignments.
+1. Import only [Blood-Donation-Platform.postman_collection.json](postman/Blood-Donation-Platform.postman_collection.json). This is the single JSON file to submit; no environment file is needed. Replace older imported copies to avoid running stale scripts.
+2. Select **No environment** in Postman. Open the collection’s **Variables** tab; `baseUrl` is already `https://b7a6-iota.vercel.app`, without `/api/v1`. Collection scripts also override stale environment values for the variables they manage.
+3. Set the private `demoPassword` and the intended role emails in collection variables. If accounts have different passwords, adjust the corresponding login request body privately. Keep exported token/password values empty when sharing files.
+4. Keep the cookie jar enabled in request settings. Login captures the server's `refreshToken` cookie automatically; do not add a manual `Cookie` header or copy a refresh token into variables. The cookie is scoped to `/api/v1/auth` and, in production, requires HTTPS. See [Postman's cookie manager documentation](https://learning.postman.com/docs/use/send-requests/response-data/cookies/).
+5. Send **Login patient**, **Login donor**, or **Login admin**. Scripts save `patientAccessToken`, `donorAccessToken`, or `adminAccessToken`, plus `activeAccessToken` and `activeSessionRole`, in collection variables. Protected examples automatically use their required role's Bearer token. New requests that inherit collection authorization use the most recent login's token. Public requests and the missing-token example explicitly use No Auth.
+6. Send **Refresh token** when needed. The latest successful login owns the cookie session: after admin login, refresh updates `adminAccessToken` and `activeAccessToken`, preserving the patient/donor access tokens. Postman stores the rotated cookie automatically. Refresh requires a login through this collection first; it does not run automatically on expired access tokens.
+7. Run the workflow folders. Resource IDs remain collection variables. Verification runs matching inline by default; in `WORKER` mode, wait for worker processing before listing donor assignments.
+8. Run **Session cleanup → Logout** last. The server revokes the current cookie session and expires its cookie. On success, scripts clear all locally saved role tokens, active-session values, and `googleLinkAccessToken`. This does not revoke other login sessions server-side, and already-issued access tokens retain their normal expiry. Failed logout preserves state for retry; failed login/refresh clears local authorization values.
+
+Cookies are shared per API host, so signing in as a different role replaces the cookie session even though all three access tokens remain available for role-specific requests. The supplied collection is configured for `https://b7a6-iota.vercel.app`. Changing `baseUrl` clears saved authorization variables before the next request; log in again. Tokens are stored in collection variables and reused automatically for subsequent requests.
 
 To run a non-linear alternative, prepare a separate resource ID, set it in the collection variable named by that request, and temporarily set `runAlternativeBranches` to `true`. `Reject assignment` needs a distinct `INVITED` assignment in `rejectAssignmentId`; `Cancel payment` needs a distinct `OPEN` Checkout in `cancelPaymentId`; and `Refund payment` needs a distinct `PAID` payment in `refundPaymentId`. Run the individual request, then return the flag to `false`. Google OAuth and the signed Stripe webhook have separate opt-in flags because they require real provider state; see the workflow guide.
 
-The collection intentionally contains no real JWT, password, Stripe key, webhook secret, personal account, or live endpoint.
+The submitted collection contains no populated passwords, JWTs, refresh cookies, or provider secrets. Submit the clean repository JSON. If exporting your working Postman copy after testing, clear passwords, tokens, provider secrets, and test resource IDs before sharing; logout clears session tokens but intentionally keeps your configured password.
 
 ## Response and error shape
 
