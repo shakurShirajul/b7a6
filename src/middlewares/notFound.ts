@@ -1,10 +1,10 @@
-import type { NextFunction, Request, Response } from "express";
-import { AppError } from "../errors/AppError.js";
+import type { Request, Response } from "express";
 
-export const notFound = (
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): void => {
-  next(new AppError(404, `Route ${req.method} ${req.originalUrl} not found`));
+export const notFound = (_req: Request, res: Response): void => {
+  res.status(404).json({
+    success: false,
+    statusCode: 404,
+    message: "Endpoint not found. Check the request URL and HTTP method.",
+    errors: [],
+  });
 };

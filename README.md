@@ -226,6 +226,8 @@ The endpoint is excluded from the public API rate limit and always returns `Cach
 
 ## Health and readiness
 
+`GET /` returns a welcome message and links to the API base path, health, and readiness endpoints. Undefined routes return HTTP `404` with the message `Endpoint not found. Check the request URL and HTTP method.` and no stack trace or reflected request URL, including in development. The welcome response does not check dependencies.
+
 `GET /health` is a process-only liveness check. It does not open or verify PostgreSQL, Redis, Stripe, Google, or SMTP connections. Use this endpoint for process liveness checks.
 
 `GET /ready` is the traffic-readiness check and, like `/health`, is mounted outside `/api/v1`. Until the instance first reports ready, each HTTP wait uses `READINESS_STARTUP_TIMEOUT_MS` (10 seconds by default) to allow lazy database and Redis connections to establish. After the first success, waits use `READINESS_TIMEOUT_MS` (1.5 seconds by default). Both budgets remain bounded; failed dependencies still return 503, and successful results are never cached. PostgreSQL retains separate connection and client query deadlines. Concurrent requests share a single underlying dependency probe so an outage cannot create an unbounded backlog of database work. The endpoint returns the normal success envelope with `data.status: "ready"` only after PostgreSQL responds and, when configured or in production, Redis reaches its ready state and responds to `PING`. Any missing, failed, or timed-out required dependency produces a redacted `503` response with `data.status: "not_ready"`; provider errors, connection URLs, credentials, and stack traces are never returned. The Redis probe connection is created lazily on the first readiness request.

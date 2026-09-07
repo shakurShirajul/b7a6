@@ -46,6 +46,19 @@ export const createApp = (options: AppOptions = {}): Application => {
     }),
   );
 
+  app.get("/", (_req, res) => {
+    res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: "Welcome to the Blood Donation Platform API",
+      data: {
+        apiBasePath: "/api/v1",
+        health: "/health",
+        readiness: "/ready",
+      },
+    });
+  });
+
   app.get("/health", (_req, res) => {
     res.status(200).json({
       success: true,
