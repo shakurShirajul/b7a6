@@ -6,7 +6,6 @@ export default {
   database: {
     connection_timeout_ms: env.DATABASE_CONNECTION_TIMEOUT_MS,
     query_timeout_ms: env.DATABASE_QUERY_TIMEOUT_MS,
-    statement_timeout_ms: env.DATABASE_STATEMENT_TIMEOUT_MS,
   },
   app_url: env.APP_URL,
   cors_origins: env.CORS_ORIGINS,

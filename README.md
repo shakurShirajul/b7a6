@@ -108,13 +108,14 @@ The application is a modular Express service. Controllers own HTTP response sema
 
 All runtime variables are validated at startup. Empty optional values are treated as unset.
 
+Database connections use connection and client query timeouts. The adapter does not send a server `statement_timeout` startup parameter because it causes upstream connection failures with Prisma Postgres pooling. `DATABASE_STATEMENT_TIMEOUT_MS` is no longer used; existing environment entries can be removed. The client query timeout bounds the caller's wait but does not guarantee server-side query cancellation.
+
 | Name                               | Required | Purpose / example guidance                                                                                                                    |
 | ---------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                             | Yes      | HTTP port, for example `5000`.                                                                                                                |
 | `DATABASE_URL`                     | Yes      | PostgreSQL connection URL.                                                                                                                    |
 | `DATABASE_CONNECTION_TIMEOUT_MS`   | No       | PostgreSQL pool connection deadline, `100..60000`; defaults to `5000`.                                                                        |
 | `DATABASE_QUERY_TIMEOUT_MS`        | No       | PostgreSQL client query deadline, `100..60000`; defaults to `15000`.                                                                          |
-| `DATABASE_STATEMENT_TIMEOUT_MS`    | No       | PostgreSQL server statement deadline, `100..60000`; defaults to `15000`.                                                                      |
 | `APP_URL`                          | Yes      | Public application origin used for Stripe success/cancel return URLs.                                                                         |
 | `CORS_ORIGINS`                     | Yes      | Comma-separated exact HTTP(S) browser origins. Paths, trailing slashes, duplicates, and wildcards are rejected.                               |
 | `TRUST_PROXY_HOPS`                 | No       | Trusted reverse-proxy hop count, `0..3`; use `1` on Render and `0` for direct local traffic.                                                  |

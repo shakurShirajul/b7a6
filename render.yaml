@@ -26,8 +26,6 @@ services:
         value: "5000"
       - key: DATABASE_QUERY_TIMEOUT_MS
         value: "15000"
-      - key: DATABASE_STATEMENT_TIMEOUT_MS
-        value: "15000"
       - key: REDIS_URL
         fromService:
           name: blood-donation-redis
@@ -99,8 +97,6 @@ services:
       - key: DATABASE_CONNECTION_TIMEOUT_MS
         value: "5000"
       - key: DATABASE_QUERY_TIMEOUT_MS
-        value: "15000"
-      - key: DATABASE_STATEMENT_TIMEOUT_MS
         value: "15000"
       - key: REDIS_URL
         fromService:

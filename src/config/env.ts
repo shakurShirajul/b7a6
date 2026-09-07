@@ -66,7 +66,6 @@ const environmentSchema = z
     DATABASE_URL: z.url(),
     DATABASE_CONNECTION_TIMEOUT_MS: boundedTimeout.default(5_000),
     DATABASE_QUERY_TIMEOUT_MS: boundedTimeout.default(15_000),
-    DATABASE_STATEMENT_TIMEOUT_MS: boundedTimeout.default(15_000),
     APP_URL: corsOriginSchema,
     CORS_ORIGINS: corsOriginsSchema,
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(3).default(0),
