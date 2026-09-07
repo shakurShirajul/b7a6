@@ -12,9 +12,9 @@ A role-based backend for coordinating verified blood requests with eligible dono
 - API base URL: `https://b7a6-iota.vercel.app/api/v1`
 - Published API documentation: **`<SET_PUBLISHED_POSTMAN_OR_OPENAPI_URL>`**
 - Admin demo email: `admin.demo@blood.local`
-- Admin demo password: share the configured `DEMO_PASSWORD` privately.
+- Admin demo password: `BloodDemo123!`.
 
-The published API-documentation URL remains a placeholder. Configure demo credentials only for the intended database and share them privately. For an existing demo administrator with a password mismatch, use the recovery command below instead of reseeding. Never commit passwords or production credentials.
+The published API-documentation URL remains a placeholder. The demo admin credentials above are included for evaluation. For an existing demo administrator with a password mismatch, use the recovery command below instead of reseeding. Keep all other account passwords and provider credentials private.
 
 ## Architecture
 
@@ -270,7 +270,7 @@ The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci
 
 ## Production smoke procedure
 
-Run this procedure manually only after an approved deployment. Use disposable demo accounts/data, Stripe **test mode**, and a private copy of `postman/Blood-Donation-Platform.postman_collection.json`; never export populated current values or commit access tokens, passwords, cookies, provider secrets, or resource IDs.
+Run this procedure manually only after an approved deployment. Use disposable demo accounts/data, Stripe **test mode**, and a private copy of `postman/Blood-Donation-Platform.postman_collection.json`; never export populated current values or commit access tokens, private account passwords, cookies, provider secrets, or resource IDs.
 
 1. Set `baseUrl` to `https://b7a6-iota.vercel.app` for the current production API (without `/api/v1`; the collection includes it). Verify `/health` returns process-only `200` and `/ready` returns dependency-aware `200`; save status/timing evidence without response headers that may contain cookies.
 2. Log in as the seeded patient, donor, and admin. Refresh one session and verify refresh-token rotation, then confirm the old cookie no longer refreshes. Keep tokens only in Postman's local current values.
@@ -362,7 +362,7 @@ The Postman webhook request contains signature/payload placeholders for document
 
 1. Import only [Blood-Donation-Platform.postman_collection.json](postman/Blood-Donation-Platform.postman_collection.json). This is the single JSON file to submit; no environment file is needed. Replace older imported copies to avoid running stale scripts.
 2. Select **No environment** in Postman. Open the collection’s **Variables** tab; `baseUrl` is already `https://b7a6-iota.vercel.app`, without `/api/v1`. Collection scripts also override stale environment values for the variables they manage.
-3. Set the private `demoPassword` and the intended role emails in collection variables. If accounts have different passwords, adjust the corresponding login request body privately. Keep exported token/password values empty when sharing files.
+3. **Login admin** is ready to use: `adminEmail=admin.demo@blood.local` and `adminPassword=BloodDemo123!` are prefilled. Patient/donor requests use the separate `demoPassword` variable; set it to their existing password and check their role emails. Only the admin password was changed. Keep private passwords and exported tokens empty when sharing files.
 4. Keep the cookie jar enabled in request settings. Login captures the server's `refreshToken` cookie automatically; do not add a manual `Cookie` header or copy a refresh token into variables. The cookie is scoped to `/api/v1/auth` and, in production, requires HTTPS. See [Postman's cookie manager documentation](https://learning.postman.com/docs/use/send-requests/response-data/cookies/).
 5. Send **Login patient**, **Login donor**, or **Login admin**. Scripts save `patientAccessToken`, `donorAccessToken`, or `adminAccessToken`, plus `activeAccessToken` and `activeSessionRole`, in collection variables. Protected examples automatically use their required role's Bearer token. New requests that inherit collection authorization use the most recent login's token. Public requests and the missing-token example explicitly use No Auth.
 6. Send **Refresh token** when needed. The latest successful login owns the cookie session: after admin login, refresh updates `adminAccessToken` and `activeAccessToken`, preserving the patient/donor access tokens. Postman stores the rotated cookie automatically. Refresh requires a login through this collection first; it does not run automatically on expired access tokens.
@@ -373,7 +373,7 @@ Cookies are shared per API host, so signing in as a different role replaces the 
 
 To run a non-linear alternative, prepare a separate resource ID, set it in the collection variable named by that request, and temporarily set `runAlternativeBranches` to `true`. `Reject assignment` needs a distinct `INVITED` assignment in `rejectAssignmentId`; `Cancel payment` needs a distinct `OPEN` Checkout in `cancelPaymentId`; and `Refund payment` needs a distinct `PAID` payment in `refundPaymentId`. Run the individual request, then return the flag to `false`. Google OAuth and the signed Stripe webhook have separate opt-in flags because they require real provider state; see the workflow guide.
 
-The submitted collection contains no populated passwords, JWTs, refresh cookies, or provider secrets. Submit the clean repository JSON. If exporting your working Postman copy after testing, clear passwords, tokens, provider secrets, and test resource IDs before sharing; logout clears session tokens but intentionally keeps your configured password.
+The submitted collection includes the demo admin email and password for evaluation; it contains no populated JWTs, refresh cookies, other account passwords, or provider secrets. Submit the clean repository JSON. If exporting your working Postman copy after testing, clear private passwords, tokens, provider secrets, and test resource IDs before sharing; logout clears session tokens but intentionally keeps your configured password.
 
 ## Response and error shape
 

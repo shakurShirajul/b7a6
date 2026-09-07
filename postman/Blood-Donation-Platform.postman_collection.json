@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b7a60000-0000-4000-8000-000000000012",
     "name": "Blood Donation Platform",
-    "description": "Single-file production collection: import this JSON only; no environment is required. Open collection Variables, set your private demoPassword and role emails, then run the login requests. baseUrl is https://b7a6-iota.vercel.app. Login saves role-specific and active access tokens in collection variables; protected requests automatically send the appropriate Bearer token. Postman captures and rotates the refreshToken cookie; keep the cookie jar enabled. Refresh updates the most recent login role. Run Session cleanup / Logout last to revoke the current cookie session and clear saved authorization. Collection values override stale environment variables. Alternative/provider requests remain opt-in. Passwords and tokens are blank in this submission file. Never submit a later export containing credentials.",
+    "description": "Single-file production collection: import this JSON only; no environment is required. Open collection Variables, use the prefilled adminEmail/adminPassword for Login admin; set your private demoPassword for patient/donor requests and check role emails, then run the login requests. baseUrl is https://b7a6-iota.vercel.app. Login saves role-specific and active access tokens in collection variables; protected requests automatically send the appropriate Bearer token. Postman captures and rotates the refreshToken cookie; keep the cookie jar enabled. Refresh updates the most recent login role. Run Session cleanup / Logout last to revoke the current cookie session and clear saved authorization. Collection values override stale environment variables. Alternative/provider requests remain opt-in. The demo admin credentials are included for evaluation. Other passwords, tokens, and provider secrets are blank; clear private credentials and session values before sharing a later export.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -26,7 +26,7 @@
           "  pm.collectionVariables.set('authBaseUrl', baseUrl);",
           "}",
           "// Collection values are authoritative, even if an old environment is selected.",
-          "const collectionKeys = [\"hospitalId\", \"createdHospitalId\", \"bloodRequestId\", \"cancelBloodRequestId\", \"deleteBloodRequestId\", \"assignmentId\", \"rejectAssignmentId\", \"donorId\", \"moderationDonorId\", \"notificationId\", \"paymentId\", \"cancelPaymentId\", \"refundPaymentId\", \"otherUserId\", \"futureRequiredAt\", \"assessmentExpiresAt\", \"runAlternativeBranches\", \"runGoogleOAuthRequests\", \"runStripeWebhookRequest\", \"baseUrl\", \"patientEmail\", \"donorEmail\", \"adminEmail\", \"demoPassword\", \"newPatientEmail\", \"googleLinkAccessToken\", \"googleAuthorizationCode\", \"googleState\", \"stripeSignature\", \"stripeWebhookPayload\", \"patientAccessToken\", \"donorAccessToken\", \"adminAccessToken\", \"activeAccessToken\", \"activeSessionRole\", \"authBaseUrl\"];",
+          "const collectionKeys = [\"hospitalId\", \"createdHospitalId\", \"bloodRequestId\", \"cancelBloodRequestId\", \"deleteBloodRequestId\", \"assignmentId\", \"rejectAssignmentId\", \"donorId\", \"moderationDonorId\", \"notificationId\", \"paymentId\", \"cancelPaymentId\", \"refundPaymentId\", \"otherUserId\", \"futureRequiredAt\", \"assessmentExpiresAt\", \"runAlternativeBranches\", \"runGoogleOAuthRequests\", \"runStripeWebhookRequest\", \"baseUrl\", \"patientEmail\", \"donorEmail\", \"adminEmail\", \"adminPassword\", \"demoPassword\", \"newPatientEmail\", \"googleLinkAccessToken\", \"googleAuthorizationCode\", \"googleState\", \"stripeSignature\", \"stripeWebhookPayload\", \"patientAccessToken\", \"donorAccessToken\", \"adminAccessToken\", \"activeAccessToken\", \"activeSessionRole\", \"authBaseUrl\"];",
           "collectionKeys.forEach(key => pm.variables.set(key, pm.collectionVariables.get(key) || ''));",
           "pm.variables.set('baseUrl', baseUrl);"
         ]
@@ -201,6 +201,12 @@
       "key": "adminEmail",
       "value": "admin.demo@blood.local",
       "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "BloodDemo123!",
+      "type": "string",
+      "description": "Demo administrator password; used only by Login admin."
     },
     {
       "key": "demoPassword",
@@ -401,7 +407,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/auth/login",
             "description": "Public login. Automatically saves this role's access token plus activeAccessToken and activeSessionRole in the collection variables. Postman captures the HttpOnly refreshToken cookie. Failed authentication clears local session variables. Success 200.",
