@@ -23,6 +23,7 @@ export default {
   redis_url: env.REDIS_URL,
   redis_command_timeout_ms: env.REDIS_COMMAND_TIMEOUT_MS,
   readiness_timeout_ms: env.READINESS_TIMEOUT_MS,
+  readiness_startup_timeout_ms: env.READINESS_STARTUP_TIMEOUT_MS,
   email: {
     smtp_host: env.SMTP_HOST,
     smtp_port: env.SMTP_PORT,

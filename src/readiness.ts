@@ -3,13 +3,14 @@ import config from "./config/index.js";
 import { prisma } from "./lib/prisma.js";
 import { withRedisTimeout } from "./shared/redis-timeout.js";
 
-type ReadinessProbe = () => Promise<unknown>;
+type ReadinessProbe = (timeoutMs: number) => Promise<unknown>;
 
 type ReadinessCheckerOptions = {
   databaseProbe?: ReadinessProbe;
   redisProbe?: ReadinessProbe;
   redisRequired?: boolean;
   timeoutMs?: number;
+  startupTimeoutMs?: number;
 };
 
 type RedisReadinessClient = {
@@ -20,7 +21,10 @@ type RedisReadinessClient = {
   off: Redis["off"];
 };
 
-const withTimeout = async (probe: ReadinessProbe, timeoutMs: number) => {
+const withTimeout = async (
+  probe: () => Promise<unknown>,
+  timeoutMs: number,
+) => {
   let timeout: NodeJS.Timeout | undefined;
   try {
     await Promise.race([
@@ -96,7 +100,7 @@ export const pingRedisWhenReady = async (
 let readinessRedis: Redis | undefined;
 let readinessClosing: Promise<void> | undefined;
 
-const getReadinessRedis = () => {
+const getReadinessRedis = (timeoutMs: number) => {
   if (!config.redis_url) {
     throw new Error("Redis is not configured");
   }
@@ -109,7 +113,7 @@ const getReadinessRedis = () => {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
-      connectTimeout: config.readiness_timeout_ms,
+      connectTimeout: timeoutMs,
       commandTimeout: Math.min(
         config.readiness_timeout_ms,
         config.redis_command_timeout_ms,
@@ -125,13 +129,13 @@ const getReadinessRedis = () => {
 };
 
 const defaultDatabaseProbe = () => prisma.$queryRaw`SELECT 1`;
-const defaultRedisProbe = async () => {
-  const redis = getReadinessRedis();
+const defaultRedisProbe = async (timeoutMs: number) => {
+  const redis = getReadinessRedis(timeoutMs);
   try {
     await withRedisTimeout(
-      () => pingRedisWhenReady(redis, config.readiness_timeout_ms),
+      () => pingRedisWhenReady(redis, timeoutMs),
       () => redis.disconnect(),
-      Math.min(config.readiness_timeout_ms, config.redis_command_timeout_ms),
+      timeoutMs,
     );
   } catch (error) {
     redis.disconnect();
@@ -149,18 +153,28 @@ export const createReadinessChecker = (
     options.redisRequired ??
     (process.env.NODE_ENV === "production" || Boolean(config.redis_url));
   const timeoutMs = options.timeoutMs ?? config.readiness_timeout_ms;
+  const startupTimeoutMs = Math.max(
+    timeoutMs,
+    options.startupTimeoutMs ?? config.readiness_startup_timeout_ms,
+  );
+  let hasBeenReady = false;
   let activeProbe: Promise<boolean> | undefined;
 
-  const runProbes = async () => {
-    const probes = [Promise.resolve().then(databaseProbe)];
-    if (redisRequired) probes.push(Promise.resolve().then(redisProbe));
+  const runProbes = async (budgetMs: number) => {
+    const probes = [Promise.resolve().then(() => databaseProbe(budgetMs))];
+    if (redisRequired) {
+      probes.push(Promise.resolve().then(() => redisProbe(budgetMs)));
+    }
     const results = await Promise.allSettled(probes);
     return results.every((result) => result.status === "fulfilled");
   };
 
   return async () => {
+    // New serverless instances need time to establish dependency connections.
+    // After the first success, keep the short deadline for outage detection.
+    const budgetMs = hasBeenReady ? timeoutMs : startupTimeoutMs;
     if (!activeProbe) {
-      const probe = runProbes();
+      const probe = runProbes(budgetMs);
       activeProbe = probe;
       void probe.finally(() => {
         if (activeProbe === probe) activeProbe = undefined;
@@ -172,7 +186,8 @@ export const createReadinessChecker = (
       let ready = false;
       await withTimeout(async () => {
         ready = await probe;
-      }, timeoutMs);
+      }, budgetMs);
+      if (ready) hasBeenReady = true;
       return ready;
     } catch {
       return false;
