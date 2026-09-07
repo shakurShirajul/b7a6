@@ -1,17 +1,9 @@
+import { requireCurrentUser } from "../../shared/request-user.js";
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { AppError } from "../../errors/AppError.js";
 import { catchAsync } from "../../utils/catchAsync.js";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { hospitalService } from "./hospital.service.js";
-
-const requireCurrentUser = (req: Request) => {
-  if (!req.user) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "Authentication is required");
-  }
-
-  return req.user;
-};
 
 const listHospitals = catchAsync(async (req: Request, res: Response) => {
   const result = await hospitalService.listHospitals(

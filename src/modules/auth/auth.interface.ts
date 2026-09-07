@@ -13,11 +13,6 @@ export type TJwtPayload = {
   jti?: string;
 };
 
-export type TAuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-};
-
 export type TRequestContext = {
   ipAddress?: string;
   userAgent?: string;

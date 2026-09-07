@@ -52,8 +52,6 @@ export const calculateMatchScore = ({
   return Math.round(score * 1_000) / 1_000;
 };
 
-export const calculatePriorityScore = calculateMatchScore;
-
 export type RankedMatch = Readonly<{
   donorId: number;
   score: number;

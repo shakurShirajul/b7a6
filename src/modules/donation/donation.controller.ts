@@ -1,16 +1,9 @@
+import { requireCurrentUser } from "../../shared/request-user.js";
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { AppError } from "../../errors/AppError.js";
 import { catchAsync } from "../../utils/catchAsync.js";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { donationService } from "./donation.service.js";
-
-const requireCurrentAdminId = (req: Request) => {
-  if (!req.user) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "Authentication is required");
-  }
-  return req.user.userId;
-};
 
 const requestContext = (req: Request) => ({
   ipAddress: req.ip,
@@ -19,7 +12,7 @@ const requestContext = (req: Request) => ({
 
 const completeDonation = catchAsync(async (req: Request, res: Response) => {
   const result = await donationService.completeDonation(
-    requireCurrentAdminId(req),
+    requireCurrentUser(req).userId,
     Number(req.params.id),
     req.body,
     requestContext(req),

@@ -1,17 +1,9 @@
+import { requireCurrentUser } from "../../shared/request-user.js";
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
-import { AppError } from "../../errors/AppError.js";
 import { catchAsync } from "../../utils/catchAsync.js";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { donorService } from "./donor.service.js";
-
-const requireCurrentUserId = (req: Request) => {
-  if (!req.user) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "Authentication is required");
-  }
-
-  return req.user.userId;
-};
 
 const requestContext = (req: Request) => ({
   ipAddress: req.ip,
@@ -19,7 +11,9 @@ const requestContext = (req: Request) => ({
 });
 
 const getMyProfile = catchAsync(async (req: Request, res: Response) => {
-  const profile = await donorService.getMyProfile(requireCurrentUserId(req));
+  const profile = await donorService.getMyProfile(
+    requireCurrentUser(req).userId,
+  );
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -30,7 +24,7 @@ const getMyProfile = catchAsync(async (req: Request, res: Response) => {
 
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   const profile = await donorService.updateMyProfile(
-    requireCurrentUserId(req),
+    requireCurrentUser(req).userId,
     req.body,
     requestContext(req),
   );
@@ -44,7 +38,7 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 
 const updateMyAvailability = catchAsync(async (req: Request, res: Response) => {
   const profile = await donorService.updateMyAvailability(
-    requireCurrentUserId(req),
+    requireCurrentUser(req).userId,
     req.body,
     requestContext(req),
   );
@@ -58,7 +52,7 @@ const updateMyAvailability = catchAsync(async (req: Request, res: Response) => {
 
 const getMyDonations = catchAsync(async (req: Request, res: Response) => {
   const result = await donorService.getMyDonations(
-    requireCurrentUserId(req),
+    requireCurrentUser(req).userId,
     req.query as never,
   );
   sendResponse(res, {

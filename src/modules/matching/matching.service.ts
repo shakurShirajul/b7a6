@@ -671,6 +671,3 @@ export const matchDonors = async (requestId: number, radiusKm: number) => {
     queuePublicationDeferred,
   };
 };
-
-export const matchDonorsAtDefaultRadius = (requestId: number) =>
-  matchDonors(requestId, config.matching.default_radius_km);

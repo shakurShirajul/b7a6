@@ -1,3 +1,4 @@
+import { phoneSchema } from "../../shared/validation.js";
 import { z } from "zod";
 import config from "../../config/index.js";
 import {
@@ -11,13 +12,6 @@ const idParamsSchema = z
   .object({ id: z.coerce.number().int().min(1) })
   .strict();
 const emptyObjectSchema = z.object({}).strict().default({});
-
-const phoneSchema = z
-  .string()
-  .trim()
-  .min(7)
-  .max(32)
-  .regex(/^\+?[0-9 ()-]+$/, "Phone number contains invalid characters");
 
 const latitudeSchema = z.coerce.number().min(-90).max(90).nullable();
 const longitudeSchema = z.coerce.number().min(-180).max(180).nullable();

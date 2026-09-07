@@ -1,3 +1,4 @@
+import { phoneSchema } from "../../shared/validation.js";
 import { z } from "zod";
 import { BloodType, Gender, Role } from "../../generated/prisma/enums.js";
 
@@ -9,13 +10,6 @@ const passwordSchema = z
   .regex(/[A-Z]/, "Password must contain an uppercase letter")
   .regex(/[0-9]/, "Password must contain a number")
   .regex(/[^A-Za-z0-9]/, "Password must contain a special character");
-
-const phoneSchema = z
-  .string()
-  .trim()
-  .min(7)
-  .max(32)
-  .regex(/^\+?[0-9 ()-]+$/, "Phone number contains invalid characters");
 
 const requireCoordinatePair = (
   value: { latitude?: number; longitude?: number },

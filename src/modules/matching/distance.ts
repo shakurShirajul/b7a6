@@ -67,9 +67,6 @@ export const haversineDistanceKm = (
   );
 };
 
-export const calculateHaversineDistance = haversineDistanceKm;
-export const haversineDistance = haversineDistanceKm;
-
 export const calculateDistanceKm = (
   fromLatitude: number,
   fromLongitude: number,
@@ -80,8 +77,6 @@ export const calculateDistanceKm = (
     { latitude: fromLatitude, longitude: fromLongitude },
     { latitude: toLatitude, longitude: toLongitude },
   );
-
-export const calculateDistance = calculateDistanceKm;
 
 export const getBoundingBox = (
   center: Coordinates,

@@ -1,12 +1,6 @@
+import { phoneSchema } from "../../shared/validation.js";
 import { z } from "zod";
 import { Gender } from "../../generated/prisma/enums.js";
-
-const phoneSchema = z
-  .string()
-  .trim()
-  .min(7)
-  .max(32)
-  .regex(/^\+?[0-9 ()-]+$/, "Phone number contains invalid characters");
 
 export const updateMyProfileValidationSchema = z.object({
   body: z
