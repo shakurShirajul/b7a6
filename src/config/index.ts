@@ -2,6 +2,7 @@ import { env } from "./env.js";
 
 export default {
   port: env.PORT,
+  cron_secret: env.CRON_SECRET,
   database_url: env.DATABASE_URL,
   database: {
     connection_timeout_ms: env.DATABASE_CONNECTION_TIMEOUT_MS,

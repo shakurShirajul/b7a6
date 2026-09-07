@@ -86,6 +86,10 @@ const environmentSchema = z
     REDIS_COMMAND_TIMEOUT_MS: boundedTimeout.max(10_000).default(1_500),
     READINESS_TIMEOUT_MS: boundedTimeout.max(10_000).default(1_500),
     READINESS_STARTUP_TIMEOUT_MS: boundedTimeout.default(10_000),
+    CRON_SECRET: z.preprocess(
+      emptyStringAsUndefined,
+      z.string().trim().min(32).optional(),
+    ),
     SMTP_HOST: optionalTrimmedString,
     SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
     SMTP_SECURE: z

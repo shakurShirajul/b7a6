@@ -1,0 +1,31 @@
+name: Production background jobs
+
+on:
+  schedule:
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: production-background-jobs
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Process queued emails, matching recovery, and expiry
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo 'Configure CRON_SECRET in both Vercel Production and GitHub Actions secrets.'
+            exit 1
+          fi
+          curl --silent --show-error --fail-with-body \
+            --connect-timeout 10 --max-time 300 \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            https://b7a6-iota.vercel.app/api/internal/jobs

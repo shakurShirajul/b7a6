@@ -33,7 +33,7 @@ Stripe -> raw-body webhook -> signature verification -> idempotent reconciliatio
 Google -> OAuth 2.0 + PKCE callback -> local refresh session
 ```
 
-The application is a modular Express service. Controllers own HTTP response semantics, Zod schemas normalize all route input, services enforce ownership and state transitions, and Prisma transactions protect multi-record workflows. Audit logs are append-only. Matching and email work is written to an outbox in the same database transaction as the domain change. By default, verification awaits matching and acknowledges its matching events on success. Email work and pending recovery jobs are published to BullMQ when Redis is configured; a running worker must process them.
+The application is a modular Express service. Controllers own HTTP response semantics, Zod schemas normalize all route input, services enforce ownership and state transitions, and Prisma transactions protect multi-record workflows. Audit logs are append-only. Matching and email work is written to an outbox in the same database transaction as the domain change. By default, verification awaits matching and acknowledges its matching events on success. Email work and pending recovery jobs are published to BullMQ when Redis is configured; a running worker or the protected scheduled job endpoint must process them.
 
 ## Code organization
 
@@ -195,7 +195,7 @@ Deploy the revision containing these changes and redeploy after changing environ
 
 The API defaults to `MATCHING_EXECUTION_MODE=INLINE`. Admin verification commits the verified request, then awaits donor matching and returns `matching.status`: `COMPLETED`, `DEFERRED` on a recoverable matching failure, or `QUEUED` in explicit `WORKER` mode. `COMPLETED` means the matching pass finished; there may be no eligible donors. Successful matching acknowledges the captured matching outbox events. Failed work remains durable for a worker or the admin rematch endpoint. Rematching does not create duplicate donor invitations.
 
-Inline matching adds database latency to verification. Ensure the Vercel function duration accommodates the full request. Email delivery, automatic expiration, and deferred outbox recovery still require a separately deployed `pnpm start:workers` process with the same database and Redis configuration; this HTTP deployment does not start that process.
+Inline matching adds database latency to verification. Ensure the Vercel function duration accommodates the full request. Email delivery, automatic expiration, and deferred outbox recovery can run through the protected `POST /api/internal/jobs` endpoint described below. A separate `pnpm start:workers` process remains an alternative; Vercel does not start that persistent process.
 
 `DATABASE_TRANSACTION_TIMEOUT_MS` defaults to `20000` and accepts `100..60000`. This is the total interactive transaction deadline, separate from the individual SQL query deadline. Donation completion performs several atomic writes; cross-region database latency can exceed Prisma's original five-second default. The larger bounded budget preserves rollback, counters, audit records, and idempotency.
 
@@ -208,6 +208,21 @@ pnpm admin:recover-demo
 Log in as `admin.demo@blood.local` with that password. Recovery rotates the password, clears password-reset credentials, revokes refresh sessions, and records an audit event. Already-issued access tokens retain their normal short expiry. Other accounts and donation history are preserved.
 
 Redeploy the changed API to activate these defaults. An existing explicit `MATCHING_EXECUTION_MODE=WORKER` setting must be changed to `INLINE` if no matching worker is deployed. No schema migration is required for this change.
+
+### Email delivery and expiry on Vercel Hobby
+
+The repository includes `.github/workflows/background-jobs.yml`. It calls `POST https://b7a6-iota.vercel.app/api/internal/jobs` approximately every five minutes, including when nobody uses the API. The HTTP request awaits a bounded sweep: expire stale invitations/reservations/requests, publish due outbox events, process up to 20 email jobs, and recover up to two queued matching jobs. Work stops being acquired after 90 seconds; an acquired job is allowed to finish. `vercel.json` sets the Express function duration to 300 seconds. Enable Fluid compute in the Vercel project.
+
+Activation:
+
+1. Generate a private random secret, for example with `openssl rand -hex 32`. Store the same value as `CRON_SECRET` in **Vercel → Project → Settings → Environment Variables → Production** and **GitHub → deployed repository → Settings → Secrets and variables → Actions → Repository secrets**. Never commit it or put it in the Postman collection.
+2. Confirm Production has working `DATABASE_URL`, `REDIS_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, and `EMAIL_FROM`. Keep `MATCHING_EXECUTION_MODE=INLINE`.
+3. Deploy this revision to Vercel and put the workflow on the GitHub repository's default branch. Enable GitHub Actions. Environment variable changes require redeployment.
+4. Open **Actions → Production background jobs → Run workflow**. Expect HTTP 200 with expiration counts, outbox publication counts, and email/matching completion/failure counts. HTTP 401 means the secret does not match; HTTP 503 means missing configuration, dependency failure, or retryable job failures. Review subsequent runs and provider delivery logs. A completed email job can also mean an already-sent or inactive invitation was safely skipped; verify `Notification.deliveryStatus=SENT` and SMTP provider delivery for a real delivery test.
+
+[Vercel Hobby cron](https://vercel.com/docs/cron-jobs/usage-and-pricing) only supports daily schedules, so this project deliberately does not configure a minutely Vercel cron. [GitHub scheduled workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) have a five-minute minimum, may be delayed, and public-repository schedules are disabled after 60 days of inactivity. This setup does **not** guarantee immediate email or exact expiry timing. For a one-minute cadence, configure an external HTTP scheduler to POST to the same endpoint with `Authorization: Bearer <CRON_SECRET>` and a 300-second request timeout; disable the GitHub schedule if replacing it.
+
+The endpoint is excluded from the public API rate limit and always returns `Cache-Control: no-store`. It requires the dedicated secret, not an admin access token. It acquires jobs through BullMQ locks, preserving compatibility with an existing worker, stable job IDs, retries, and stalled-job recovery. Temporary consumers close before the HTTP response; zero continuously connected workers is therefore expected between scheduled invocations. Failed work remains durable. SMTP delivery remains at-least-once: provider acceptance followed by a crash before recording `SENT` can cause a duplicate email. Monitor failed jobs and backlog; this bounded schedule is intended for modest traffic.
 
 ## Health and readiness
 

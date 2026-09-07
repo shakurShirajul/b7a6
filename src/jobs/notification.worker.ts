@@ -27,6 +27,9 @@ const createEmailTransport = () => {
     host: config.email.smtp_host,
     port: config.email.smtp_port,
     secure: config.email.smtp_secure,
+    connectionTimeout: 5_000,
+    greetingTimeout: 5_000,
+    socketTimeout: 10_000,
     auth:
       config.email.smtp_user && config.email.smtp_password
         ? {
@@ -92,7 +95,7 @@ export const deliverNotificationEmail = async (notificationId: number) => {
   return { delivered: true as const };
 };
 
-const processNotificationJob = async (
+export const processNotificationJob = async (
   job: Job<EmailNotificationJobData, void, typeof EMAIL_NOTIFICATION_JOB>,
 ) => {
   if (job.name !== EMAIL_NOTIFICATION_JOB) {

@@ -22,6 +22,7 @@ import {
   paymentWebhookRoutes,
 } from "./modules/payment/payment.routes.js";
 import { userRoutes } from "./modules/user/user.routes.js";
+import { createBackgroundHandler } from "./jobs/background.routes.js";
 import { checkReadiness } from "./readiness.js";
 
 type AppOptions = {
@@ -75,6 +76,8 @@ export const createApp = (options: AppOptions = {}): Application => {
       data: { status: "ready" },
     });
   });
+
+  app.post("/api/internal/jobs", createBackgroundHandler());
 
   app.use(paymentWebhookRoutes);
   app.use(express.json({ limit: "1mb" }));

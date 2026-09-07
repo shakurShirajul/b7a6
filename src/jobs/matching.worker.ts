@@ -12,7 +12,7 @@ import {
   MATCHING_QUEUE_NAME,
 } from "./queue.js";
 
-const processMatchingJob = async (
+export const processMatchingJob = async (
   job: Job<MatchBloodRequestJobData, void, typeof MATCH_BLOOD_REQUEST_JOB>,
 ) => {
   if (job.name !== MATCH_BLOOD_REQUEST_JOB) {
