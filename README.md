@@ -137,7 +137,7 @@ Database connections use connection and client query timeouts. The adapter does 
 | `DATABASE_TRANSACTION_TIMEOUT_MS`  | No       | Total interactive transaction deadline, `100..60000`; defaults to `20000`.                                                                    |
 | `APP_URL`                          | Yes      | Public application origin used for Stripe success/cancel return URLs.                                                                         |
 | `CORS_ORIGINS`                     | Yes      | Comma-separated exact HTTP(S) browser origins. Paths, trailing slashes, duplicates, and wildcards are rejected.                               |
-| `TRUST_PROXY_HOPS`                 | No       | Trusted reverse-proxy hop count, `0..3`; use `1` on Render and `0` for direct local traffic.                                                  |
+| `TRUST_PROXY_HOPS`                 | No       | Trusted reverse-proxy hop count, `0..3`; use `0` for direct local traffic; match the deployed proxy topology.                                 |
 | `BCRYPT_SALT_ROUNDS`               | Yes      | Integer `4..31`; `12` is appropriate locally.                                                                                                 |
 | `JWT_ACCESS_TOKEN_SECRET`          | Yes      | Random secret of at least 32 characters.                                                                                                      |
 | `JWT_REFRESH_TOKEN_SECRET`         | Yes      | Different random secret of at least 32 characters.                                                                                            |
@@ -211,21 +211,11 @@ Redeploy the changed API to activate these defaults. An existing explicit `MATCH
 
 ## Health and readiness
 
-`GET /health` is a process-only liveness check. It does not open or verify PostgreSQL, Redis, Stripe, Google, or SMTP connections. Render uses this endpoint to determine whether the HTTP process is alive.
+`GET /health` is a process-only liveness check. It does not open or verify PostgreSQL, Redis, Stripe, Google, or SMTP connections. Use this endpoint for process liveness checks.
 
 `GET /ready` is the traffic-readiness check and, like `/health`, is mounted outside `/api/v1`. Until the instance first reports ready, each HTTP wait uses `READINESS_STARTUP_TIMEOUT_MS` (10 seconds by default) to allow lazy database and Redis connections to establish. After the first success, waits use `READINESS_TIMEOUT_MS` (1.5 seconds by default). Both budgets remain bounded; failed dependencies still return 503, and successful results are never cached. PostgreSQL retains separate connection and client query deadlines. Concurrent requests share a single underlying dependency probe so an outage cannot create an unbounded backlog of database work. The endpoint returns the normal success envelope with `data.status: "ready"` only after PostgreSQL responds and, when configured or in production, Redis reaches its ready state and responds to `PING`. Any missing, failed, or timed-out required dependency produces a redacted `503` response with `data.status: "not_ready"`; provider errors, connection URLs, credentials, and stack traces are never returned. The Redis probe connection is created lazily on the first readiness request.
 
-Browser CORS is credentialed and allowlist-only. Set `CORS_ORIGINS` to exact frontend origins, separated by commas; server-to-server requests without an `Origin` header remain valid. Never use `*` with cookies or dynamically reflect arbitrary origins. The application trusts a bounded number of proxy hops before rate limiting and audit IP capture: Render uses `TRUST_PROXY_HOPS=1`, while a directly reached local process uses `0`. Do not increase it unless the network topology contains that exact number of trusted proxies.
-
-## Alternative deployment: Render
-
-[`render.yaml`](render.yaml) provisions the API, background worker, private PostgreSQL database, and private Render Key Value instance in Singapore. It pins Node 22.14 and pnpm 10.20, installs from the lockfile, generates Prisma Client during the build, applies committed migrations with `pnpm db:deploy` in each service's pre-deploy step, starts the compiled entrypoints at `dist/src/server.js` and `dist/src/jobs/worker.js`, and gates automatic deploys on passing repository checks. The declared plans are billable; review current Render pricing and capacity before creating the Blueprint.
-
-1. Create a Render Blueprint from this repository and review the proposed resources. Do not deploy from an unreviewed branch.
-2. At the initial Blueprint prompt, enter the exact frontend `CORS_ORIGINS` allowlist and the Google/Stripe variables marked `sync: false`. Never paste secrets into `render.yaml`, repository settings visible to untrusted users, or build logs. Render generates the JWT and Google state secrets and wires the private database/Redis URLs.
-3. Keep Stripe in test mode for validation. `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` must come from the same Stripe mode and account. Add SMTP variables directly to both services if email delivery is part of the deployment acceptance criteria.
-4. Deploy the API and worker. They are independently deployable services, so each runs `pnpm db:deploy` and gates its own startup on successful migrations instead of assuming the other service deployed first. Keep schema changes backward-compatible across the rollout window. A failed migration cancels that service's release; do not replace `pnpm db:deploy` with `prisma migrate dev` or `migrate reset`.
-5. Confirm `GET https://<api-host>/health` returns `200`, then confirm `GET https://<api-host>/ready` returns `200`. A `503` from `/ready` means PostgreSQL or required Redis is unavailable; inspect private Render logs rather than exposing the provider error to the client.
+Browser CORS is credentialed and allowlist-only. Set `CORS_ORIGINS` to exact frontend origins, separated by commas; server-to-server requests without an `Origin` header remain valid. Never use `*` with cookies or dynamically reflect arbitrary origins. The application trusts a bounded number of proxy hops before rate limiting and audit IP capture: a directly reached local process uses `0`; configure deployed instances for their actual trusted proxy topology. Do not increase it unless the network topology contains that exact number of trusted proxies.
 
 ## Live provider URLs
 
