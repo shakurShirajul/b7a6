@@ -11,6 +11,7 @@ import { prisma } from "../../lib/prisma.js";
 import { recordAuditEvent } from "../../shared/audit.js";
 import { invalidateDashboardCache } from "../../shared/dashboard-cache.js";
 import { lockVerifiedHospitalForRequest } from "../../shared/hospital-lock.js";
+import { dispatchVerifiedRequestMatching } from "../matching/dispatch.js";
 import type { TRequestContext } from "../auth/auth.interface.js";
 import type {
   BloodRequestListQuery,
@@ -777,20 +778,15 @@ const verifyBloodRequest = async (
   payload: VerifyBloodRequestPayload,
   context: TRequestContext,
 ) => {
+  let request: Awaited<ReturnType<typeof verifyBloodRequestOnce>> | undefined;
   for (
     let attempt = 1;
     attempt <= VERIFICATION_TRANSACTION_ATTEMPTS;
     attempt += 1
   ) {
     try {
-      const request = await verifyBloodRequestOnce(
-        adminId,
-        id,
-        payload,
-        context,
-      );
-      await invalidateDashboardCache();
-      return request;
+      request = await verifyBloodRequestOnce(adminId, id, payload, context);
+      break;
     } catch (error) {
       const shouldRetry =
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -800,10 +796,23 @@ const verifyBloodRequest = async (
     }
   }
 
-  throw new AppError(
-    httpStatus.CONFLICT,
-    "Blood request review could not be completed due to contention",
-  );
+  if (!request) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "Blood request review could not be completed due to contention",
+    );
+  }
+  await invalidateDashboardCache();
+  if (payload.decision !== VerificationStatus.VERIFIED) return request;
+
+  const matching = await dispatchVerifiedRequestMatching(id);
+  if (matching.status === "COMPLETED") {
+    request = await prisma.bloodRequest.findUniqueOrThrow({
+      where: { id },
+      select: requestDetailSelect,
+    });
+  }
+  return { ...request, matching };
 };
 
 export const bloodRequestService = {

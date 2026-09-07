@@ -6,6 +6,7 @@ export default {
   database: {
     connection_timeout_ms: env.DATABASE_CONNECTION_TIMEOUT_MS,
     query_timeout_ms: env.DATABASE_QUERY_TIMEOUT_MS,
+    transaction_timeout_ms: env.DATABASE_TRANSACTION_TIMEOUT_MS,
   },
   app_url: env.APP_URL,
   cors_origins: env.CORS_ORIGINS,
@@ -39,6 +40,7 @@ export default {
     min_donation_interval_days: env.DONOR_MIN_DONATION_INTERVAL_DAYS,
   },
   matching: {
+    execution_mode: env.MATCHING_EXECUTION_MODE,
     default_radius_km: env.MATCHING_DEFAULT_RADIUS_KM,
     max_radius_km: env.MATCHING_MAX_RADIUS_KM,
     max_candidates: env.MATCHING_MAX_CANDIDATES,

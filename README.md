@@ -142,6 +142,7 @@ Database connections use connection and client query timeouts. The adapter does 
 | `DONOR_MAX_AGE_YEARS`              | No       | Defaults to `65`, and cannot be below the minimum.                                                                                            |
 | `DONOR_MIN_WEIGHT_KG`              | No       | Defaults to `50`.                                                                                                                             |
 | `DONOR_MIN_DONATION_INTERVAL_DAYS` | No       | Defaults to `120`.                                                                                                                            |
+| `MATCHING_EXECUTION_MODE` | No | `INLINE` (default) runs matching during admin verification; `WORKER` requires a deployed BullMQ worker. |
 | `MATCHING_DEFAULT_RADIUS_KM`       | No       | Defaults to `25`.                                                                                                                             |
 | `MATCHING_MAX_RADIUS_KM`           | No       | Defaults to `50` and cannot be below the default.                                                                                             |
 | `MATCHING_MAX_CANDIDATES`          | No       | Eligible donor cap; defaults to `500`. Raw scans advance in pages of at most 200.                                                             |
@@ -155,6 +156,18 @@ Database connections use connection and client query timeouts. The adapter does 
 | `PAYMENT_MAX_MINOR_UNITS`          | Yes      | Largest accepted amount; must be at least the minimum.                                                                                        |
 | `DEMO_PASSWORD`                    | Seed     | Chosen demo-account password. Required by production seeding.                                                                                 |
 | `NODE_ENV`                         | No       | Validated as `development`, `test`, or `production`; defaults to `development`. It affects secure cookies, stack visibility, and seed safety. |
+
+## Vercel matching and donation completion
+
+The API defaults to `MATCHING_EXECUTION_MODE=INLINE`. Admin verification commits the verified request, then awaits donor matching and returns `matching.status`: `COMPLETED`, `DEFERRED` on a recoverable matching failure, or `QUEUED` in explicit `WORKER` mode. `COMPLETED` means the matching pass finished; there may be no eligible donors. Successful matching acknowledges the captured matching outbox events. Failed work remains durable for a worker or the admin rematch endpoint. Rematching does not create duplicate donor invitations.
+
+Inline matching adds database latency to verification. Ensure the Vercel function duration accommodates the full request. Email delivery, automatic expiration, and deferred outbox recovery still require a separately deployed `pnpm start:workers` process with the same database and Redis configuration; this HTTP deployment does not start that process.
+
+`DATABASE_TRANSACTION_TIMEOUT_MS` defaults to `20000` and accepts `100..60000`. This is the total interactive transaction deadline, separate from the individual SQL query deadline. Donation completion performs several atomic writes; cross-region database latency can exceed Prisma's original five-second default. The larger bounded budget preserves rollback, counters, audit records, and idempotency.
+
+To recover only the existing active demo administrator, set a private strong `DEMO_PASSWORD` (at least 12 characters) and run `pnpm admin:recover-demo`. This rotates that account's password and revokes refresh sessions without rerunning the full seed or changing other accounts.
+
+Redeploy the changed API to activate these defaults. An existing explicit `MATCHING_EXECUTION_MODE=WORKER` setting must be changed to `INLINE` if no matching worker is deployed. No schema migration is required for this change.
 
 ## Health and readiness
 
@@ -199,7 +212,7 @@ Run this procedure manually only after an approved deployment. Use disposable de
 1. Set `baseUrl` to `https://<api-host>`. Verify `/health` returns process-only `200` and `/ready` returns dependency-aware `200`; save status/timing evidence without response headers that may contain cookies.
 2. Log in as the seeded patient, donor, and admin. Refresh one session and verify refresh-token rotation, then confirm the old cookie no longer refreshes. Keep tokens only in Postman's local current values.
 3. Run the three role-boundary samples: donor calling an admin endpoint, patient calling a donor-only endpoint, and an unauthenticated protected request. Expect `403`, `403`, and `401` respectively; confirm no protected record is returned.
-4. Run the happy-path folder sequence: patient lists a verified hospital and creates a fresh future-dated request; admin verifies it; wait for the worker; donor lists and accepts the invitation; admin completes the assignment. Confirm the request, reservation, donation, and counters reach the documented states.
+4. Run the happy-path folder sequence: patient lists a verified hospital and creates a fresh future-dated request; admin verifies it; check `matching.status` (wait for the worker in `WORKER` mode); donor lists and accepts the invitation; admin completes the assignment. Confirm the request, reservation, donation, and counters reach the documented states.
 5. Create a Stripe test-mode Checkout Session, open its returned URL, pay with a Stripe test method, and let Stripe send a genuine signed event to the live HTTPS webhook. Poll the payment until it is `PAID`. Optionally validate cancellation/refund only with separate payment IDs as described in [the workflow guide](docs/api-workflows.md#payments).
 6. Review API, worker, PostgreSQL, Redis, and provider logs. Search for and fail the smoke review on any JWT/cookie, password, authorization header, database/Redis URL, Stripe/Google/SMTP secret, raw webhook body, precise donor coordinates/address, eligibility evidence/reason, or stack trace in production HTTP responses. Expected operational logs should contain only stable event names and non-sensitive internal IDs/counts.
 7. Record timestamps, status codes, sanitized resource IDs, Stripe test event IDs, and reviewer sign-off outside the repository. Delete disposable data through approved application/administrative workflows; do not run destructive database commands.
@@ -250,7 +263,7 @@ Google sign-in starts at `GET /api/v1/auth/google`. Register the exact `GOOGLE_C
 
 ## Durable jobs and Redis timeouts
 
-Every matching/email job carries its `outboxEventId`. `processedAt` records publication; the new `completedAt` records worker acknowledgement only after successful or idempotently skipped domain processing. Apply the `20260906_final_outbox_acknowledgement` migration before running the updated API/worker. Older published rows are reconciled against retained jobs or safely replayed through the domain handlers.
+Every matching/email job carries its `outboxEventId`. `processedAt` records publication; the new `completedAt` records matching/worker acknowledgement only after successful or idempotently skipped domain processing. Apply the `20260906_final_outbox_acknowledgement` migration before running the updated API/worker. Older published rows are reconciled against retained jobs or safely replayed through the domain handlers.
 
 The publisher selects bounded due batches, claims each row with a conditional 15-minute lease, and leaves unacknowledged work durable. Waiting/active/delayed jobs retain their stable `outbox-<id>` deduplication ID. Terminal failure clears publication state and schedules a cooldown starting at two minutes and growing to one hour; a missed failure callback is recovered by the next due lease scan with at least a one-minute cooldown. A retained failed job is removed only after that cooldown, then the same durable ID is republished. This also recovers missing Redis jobs. Restore the dependency and keep the worker running; there is no need to delete durable outbox rows or reset workflow data. Persistent failures remain visible via controlled `lastError` codes and should be investigated. SMTP remains at-least-once: a crash after server acceptance but before recording `SENT` can duplicate an email.
 
@@ -286,7 +299,7 @@ The Postman webhook request contains signature/payload placeholders for document
 2. Select **Blood Donation Platform - Local**.
 3. Enter the same `demoPassword` value used for `DEMO_PASSWORD`. Do not save secrets to shared initial values or commit exported current values.
 4. Start the API and workers, then run requests in folder order. Login scripts save role-specific access tokens; list/create scripts save resource IDs as collection variables. Non-linear alternatives and external callback/webhook examples are skipped by default, so they cannot consume happy-path state.
-5. A complete lifecycle needs a fresh future-dated request. Verification publishes matching asynchronously, so wait for the worker before listing donor assignments.
+5. A complete lifecycle needs a fresh future-dated request. Verification runs matching inline by default. In `WORKER` mode, wait for worker processing before listing donor assignments.
 
 To run a non-linear alternative, prepare a separate resource ID, set it in the collection variable named by that request, and temporarily set `runAlternativeBranches` to `true`. `Reject assignment` needs a distinct `INVITED` assignment in `rejectAssignmentId`; `Cancel payment` needs a distinct `OPEN` Checkout in `cancelPaymentId`; and `Refund payment` needs a distinct `PAID` payment in `refundPaymentId`. Run the individual request, then return the flag to `false`. Google OAuth and the signed Stripe webhook have separate opt-in flags because they require real provider state; see the workflow guide.
 

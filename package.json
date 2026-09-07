@@ -10,6 +10,7 @@
     "start": "node dist/src/server.js",
     "start:workers": "node dist/src/jobs/worker.js",
     "seed:admin": "pnpm seed",
+    "admin:recover-demo": "tsx src/scripts/reset-demo-admin.ts",
     "seed": "tsx src/scripts/seed.ts",
     "lint": "eslint .",
     "format": "prettier --check \"src/**/*.ts\" \"prisma.config.ts\" \"eslint.config.js\" \"package.json\" \"tsconfig.json\"",

@@ -12,7 +12,7 @@ import { AppError } from "../../errors/AppError.js";
 import { prisma } from "../../lib/prisma.js";
 import type { TRequestContext } from "../auth/auth.interface.js";
 import { evaluateDonorEligibility } from "../donor/donor.eligibility.js";
-import { matchDonors } from "../matching/matching.service.js";
+import { runRequestMatching } from "../matching/dispatch.js";
 import { recordAuditEvent } from "../../shared/audit.js";
 import { lockDonorEvidenceForProfile } from "../../shared/donor-evidence-lock.js";
 import {
@@ -685,7 +685,7 @@ const rematchBloodRequest = async (
     );
   });
 
-  const result = await matchDonors(requestId, payload.radiusKm);
+  const result = await runRequestMatching(requestId, payload.radiusKm);
   await invalidateDashboardCache();
   return result;
 };

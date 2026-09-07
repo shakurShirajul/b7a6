@@ -9,5 +9,10 @@ const adapter = new PrismaPg({
   connectionTimeoutMillis: config.database.connection_timeout_ms,
   query_timeout: config.database.query_timeout_ms,
 });
-const prisma = new PrismaClient({ adapter });
+// Multi-query donation transactions exceed Prisma's 5s default across regions.
+// Keep the whole transaction atomic while allowing a bounded execution budget.
+const prisma = new PrismaClient({
+  adapter,
+  transactionOptions: { timeout: config.database.transaction_timeout_ms },
+});
 export { prisma };
